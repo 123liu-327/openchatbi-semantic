@@ -114,3 +114,53 @@ Live source regeneration: 11 files byte-identical; {'metrics': 13, 'rules': 8, '
 指定 Conda Python 下验证：全量 `785 passed, 1 skipped in 24.72s`；`mypy openchatbi/semantic` 为 `Success: no issues found in 6 source files`；新增语义代码和测试 Ruff 通过；Black 全库通过（171 文件）；数据严格校验 0 errors / 0 warnings。全库 Ruff 的两个基线问题如上，未修改上游文件。
 
 边界：本次仅增加闭包/渲染纯函数，没有提前填充 T7 门面装配，也未接入 text2sql。渲染器只展示调用方传入的数据，不推断规则优先级或发明 JOIN 键。下一任务 T5 关系图与 JOIN 计划，随后按任务实现规则和装配。
+
+## 2026-11-16：T5，新增关系图与 JOIN 计划
+
+这是上游没有的新增能力，未重写上游 SQL 生成或选表逻辑。上游复用范围仅为原有的只读外键元数据接口。
+
+done-when：
+
+- ✔ 新增 `join.py`：来源合并、确定性锚表选择、有向图规划、桥接表反补和 `to_sql_clause`。不改变 `SemanticProvider` 签名，门面仍按 T7 装配。
+- ✔ 新增 `ForeignKeyJoinSource`、`YamlJoinSource`，显式 load 才读文件/元数据，导入和构造不建立 catalog 客户端。YAML 相对配置文件或仓库根定位，拒绝 BOM、非 UTF-8、结构错误和记录字段拼写错误。
+- ✔ FK 与 declared 的同向端点冲突时 declared 为权威；权威定义内部有多个键/类型/基数角色则报带来源的冲突。完全相同定义去重，顺序不依赖来源输入顺序。
+- ✔ 复合键完整保留，ON 子句用 AND；手写 SQL 逐字对照通过。上游实际已支持复合 FK 数组（与计划的假设不同），本次未将这个已有读取能力当作新增规划能力。
+- ✔ 不可达表进入 `unreachable`，`reason` 说明方向及顺序约束，不猜键、不自动 CROSS JOIN。未知锚表生成空 SQL。
+- ✔ INNER 阶段先于 LEFT 阶段，步骤保持引用拓扑。对必须 LEFT→INNER 的路径明确降级为不可达，避免通过乱序或隐式改变 JOIN 类型来满足测试。方向反转仅使用已有反向声明，不自动反转 LEFT。
+- ✔ 锚表按未到达请求数、one-to-many 边数、步骤数、名称依次排序；输入边和目标顺序排列组合测试结果逐字一致。
+
+验证（全部使用 `C:/Users/Anconda/envs/agent_study/python.exe`）：
+
+```text
+python -m pytest tests/semantic/test_join.py -o addopts= -q
+29 passed in 0.59s
+
+python -m pytest tests/semantic -o addopts= -q
+112 passed in 5.96s
+
+python -m pytest tests/golden tests/semantic -o addopts= -q
+142 passed in 11.21s
+
+python -m pytest -o addopts= -q
+818 passed, 1 skipped in 23.09s
+
+python -m mypy openchatbi/semantic
+Success: no issues found in 10 source files
+
+python -m ruff check openchatbi/semantic tests/semantic
+All checks passed!
+
+python -m black --check .
+176 files would be left unchanged.
+
+python scripts/validate_semantic_data.py --strict
+0 errors; counts={'metrics': 13, 'rules': 8, 'edges': 6}; warnings=0
+```
+
+全库 Ruff 仍为两个已记录的基线问题（UP042 / B010）；新代码无新增问题。为指定环境补装项目已声明的 dev 依赖 types-PyYAML，未新增运行时依赖或修改锁文件。
+
+阶段数字：12 个手工标注的 JOIN 结构场景 12/12 命中，表、键、类型及顺序逐项核对且全部在 SQLite 实际执行；测试数据见 `tests/semantic/fixtures/join_expectations.yaml`。另插入同日异币种汇率仍得到 10 行订单，无订单客户经两层 LEFT JOIN 仍被保留。真实上游 loader 读出 2 条 FK，与 6 条 YAML 声明合并仍为 6 条；另建真实复合外键表验证未截断键数组。禁网/无 key 及新进程导入隔离检查通过。
+
+这一数字衡量新增确定性规划器，不是 LLM 问答端到端命中率；上游原无规划器，不虚构改造前模型准确率。M2 问答链路对比仍需 T8 接入后验证。
+
+遗留边界：当前无自连接别名/同端点多角色选择，不做跨 schema 扫描或方言引号编译。原外键 loader 会把反射异常记录 warning 后返回 []，保留该行为并测试日志可见性；不能把“无边”当成已确认不存在外键。部分规划的 SQL 只包含可达部分，消费方必须先处理 unreachable。未修改任何上游生产文件，未改现有 golden 测试。

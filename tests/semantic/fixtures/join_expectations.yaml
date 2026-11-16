@@ -1,0 +1,21 @@
+version: 1
+edge_definitions:
+  order_product: [sales_orders, dim_products, inner, [[product_id, product_id]]]
+  order_customer: [sales_orders, dim_customers, inner, [[customer_id, customer_id]]]
+  order_rate: [sales_orders, exchange_rates, left, [[order_date, rate_date], [currency, currency]]]
+  product_order: [dim_products, sales_orders, left, [[product_id, product_id]]]
+  customer_order: [dim_customers, sales_orders, left, [[customer_id, customer_id]]]
+  rate_order: [exchange_rates, sales_orders, left, [[rate_date, order_date], [currency, currency]]]
+cases:
+  - {question: 按产品看订单, anchor: sales_orders, targets: [dim_products], expected: [order_product]}
+  - {question: 按客户看订单, anchor: sales_orders, targets: [dim_customers], expected: [order_customer]}
+  - {question: 订单按日期和币种折算, anchor: sales_orders, targets: [exchange_rates], expected: [order_rate]}
+  - {question: 按产品折算订单, anchor: sales_orders, targets: [dim_products, exchange_rates], expected: [order_product, order_rate]}
+  - {question: 按客户折算订单, anchor: sales_orders, targets: [dim_customers, exchange_rates], expected: [order_customer, order_rate]}
+  - {question: 按客户和产品看订单, anchor: sales_orders, targets: [dim_customers, dim_products], expected: [order_customer, order_product]}
+  - {question: 按客户和产品折算订单, anchor: sales_orders, targets: [dim_customers, dim_products, exchange_rates], expected: [order_customer, order_product, order_rate]}
+  - {question: 保留无订单的产品, anchor: dim_products, targets: [sales_orders], expected: [product_order]}
+  - {question: 保留无订单的客户, anchor: dim_customers, targets: [sales_orders], expected: [customer_order]}
+  - {question: 保留未被订单使用的汇率, anchor: exchange_rates, targets: [sales_orders], expected: [rate_order]}
+  - {question: 保留产品并关联折算汇率, anchor: dim_products, targets: [exchange_rates], expected: [product_order, order_rate]}
+  - {question: 保留客户并关联折算汇率, anchor: dim_customers, targets: [exchange_rates], expected: [customer_order, order_rate]}

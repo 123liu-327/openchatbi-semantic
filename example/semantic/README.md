@@ -28,3 +28,26 @@ catalog 通过静态解析源 `database/init.sql` 的 CREATE TABLE 和 INSERT VA
 已知业务冲突：源“收入”和“含税”规则可同时触发，导致相同列一边必须使用、一边禁止使用。迁移保持原规则并记录，不把结构校验通过当成冲突已解决；T6 必须显式处理规则冲突。多步指标有两个时间字段，当前契约只提供一个 `time_field`，因此置空并在报告中保留原文；T4/T7 应通过依赖拿到各来源时间字段。
 
 来源均使用 `chatbi_mvp:<file>#<key>` 标注；本目录仅迁移本地源项目的演示知识和种子数据，不包含其运行时代码。
+
+T5 新增的关系规划能力可独立使用，配置装配仍留待 T7：
+
+```python
+from openchatbi.semantic.join import JoinGraph, merge_edges, to_sql_clause
+from openchatbi.semantic.sources.catalog_fk import ForeignKeyJoinSource
+from openchatbi.semantic.sources.yaml_file import YamlJoinSource
+
+declared = YamlJoinSource("example/semantic/joins.yaml").load_edges()
+# 已有 catalog 时可显式读取外键：
+# reflected = ForeignKeyJoinSource(catalog).load_edges()
+# edges = merge_edges(reflected, declared)
+graph = JoinGraph(declared, tables=("finance_expenses",))
+plan = graph.plan_join("", ["sales_orders", "dim_products", "exchange_rates"])
+if not plan.unreachable:
+    print(to_sql_clause(plan))
+```
+
+空锚表表示自动选择，按可达请求表数量、one-to-many 边数、步骤数、表名字典序比较。图严格有向，不自动反转 LEFT JOIN；相同有向端点的 declared 定义覆盖 FK 提示，权威来源自身有冲突则报错，包含来源定位。相同端点的多个外键角色以及自连接需要明确的角色/别名定义，当前契约不足以表达时直接报告，不任意挑一条。
+
+线性计划先遍历 INNER 边，再扩展 LEFT 边，只保留目标所需的桥接表。需要 LEFT 后接 INNER 的路径会列入 `unreachable`，因为当前计划无法同时保持可空行和 JOIN 顺序。`to_sql_clause` 输出可达部分，调用方执行前必须检查 `unreachable`；未知锚表不产生 SQL。当前仅支持无须方言引号的简单标识符和限定表名。
+
+外键来源在 `load_edges()` 才复用原 `DataCatalogLoader.get_foreign_keys()`。实测原接口已支持复合键数组，适配器完整保留；规划器本身是新增能力。catalog 的表名前缀视为该引擎默认数据库的展示限定名，不跨 schema 扫描；FK 返回的 referred_schema 会保留。原 loader 的反射错误会记录 warning 并返回空列表，这一原行为未改动；适配器自己的读取/结构校验异常会带表和记录定位抛出。

@@ -52,8 +52,35 @@ review_notes:
   - 多步指标的原始公式、步骤和复合时间字段保留在迁移报告 conversions 中，运行时依赖 requires_multi_step。
 rule_overrides:
   revenue_requires_net_amount:
-    exclude_any: [含税]
+    exclude_any: [含税, tax-inclusive, tax inclusive, including tax, gross revenue]
+    trigger_any: [收入, 销售额, 营业收入, 营收, revenue, income]
   revenue_forbids_gross_amount:
-    exclude_any: [含税]
+    exclude_any: [含税, tax-inclusive, tax inclusive, including tax, gross revenue]
+    trigger_any: [收入, 销售额, 营业收入, 营收, 成本, 毛利, 利润, revenue, income, cost, profit, margin]
+  tax_inclusive_requires_gross_amount:
+    trigger_any: [含税, 含税金额, 含税收入, tax-inclusive, tax inclusive, including tax, gross revenue]
+  tax_inclusive_forbids_net_amount:
+    trigger_any: [含税, 含税金额, 含税收入, tax-inclusive, tax inclusive, including tax, gross revenue]
   cost_requires_material_and_labor:
     forbid_columns: [dim_products.standard_cost]
+    trigger_any: [成本, 毛利, 利润, cost, profit, margin]
+  completed_order_filter:
+    trigger_any: [收入, 销售额, 订单量, 订单数, 客单价, revenue, income, order count, average order value]
+  currency_conversion_fields:
+    trigger_any: [人民币, 汇率, 换算, 折算, 统一币种, currency, exchange rate, conversion]
+  expense_subtotal_exclusion:
+    trigger_any: [总费用, 期间费用合计, 费用汇总, total expenses, operating expenses]
+metric_aliases:
+  revenue: [income, sales revenue, net sales]
+  cogs: [cost, cost of goods sold, sales cost]
+  gross_profit: [gross profit]
+  gross_margin_rate: [gross margin rate, gross margin percentage]
+  total_expense: [total expenses, operating expenses]
+  profit: [operating profit, net profit]
+  avg_order_value: [average order value]
+  order_count: [order count, number of orders]
+  rd_expense_ratio: [R&D expense ratio]
+  selling_expense_ratio: [selling expense ratio]
+  product_line_revenue: [revenue by product line]
+  region_revenue: [revenue by region]
+  total_quantity: [quantity sold, sales volume]

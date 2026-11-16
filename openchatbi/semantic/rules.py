@@ -1,9 +1,10 @@
 """Explicit rule matching and hard schema constraints; no business vocabulary."""
 
+import re
 from collections.abc import Mapping, Sequence
 from typing import Any, Protocol
 
-from openchatbi.semantic.models import BusinessRule
+from openchatbi.semantic.models import BusinessRule, MetricSpec
 
 
 class RuleCatalog(Protocol):
@@ -14,6 +15,35 @@ class RuleCatalog(Protocol):
 
 class RuleConflictError(ValueError):
     pass
+
+
+def validate_metric_rules(metrics: Sequence[MetricSpec], rules: Sequence[BusinessRule]) -> None:
+    """Reject known canonical-expression conflicts; this is not an SQL AST validator."""
+    forbidden = {column for rule in rules for column in rule.forbid_columns}
+    for metric in metrics:
+        expression = metric.sql_template or metric.formula or ""
+        aliases = {table: table for table in metric.source_tables}
+        for match in re.finditer(
+            r"\b(?:FROM|JOIN)\s+([\w.]+)(?:\s+(?!WHERE\b|JOIN\b|ON\b|GROUP\b|LEFT\b|INNER\b)(\w+))?", expression, re.I
+        ):
+            table, alias = match.groups()
+            aliases[alias or table] = table
+        referenced = {
+            f"{aliases[alias]}.{column}"
+            for alias, column in re.findall(r"\b(\w+)\.(\w+)\b", expression)
+            if alias in aliases
+        }
+        for value in forbidden:
+            if "." not in value:
+                if re.search(r"\b" + re.escape(value) + r"\b", expression):
+                    referenced.add(value)
+            elif len(metric.source_tables) == 1 and value.rsplit(".", 1)[0] == metric.source_tables[0]:
+                if re.search(r"(?<![\w.])" + re.escape(value.rsplit(".", 1)[1]) + r"\b", expression):
+                    referenced.add(value)
+        if referenced & forbidden:
+            raise RuleConflictError(
+                f"canonical metric {metric.name} conflicts with active rules: {sorted(referenced & forbidden)}; {metric.provenance}"
+            )
 
 
 def match_rules(rules: Sequence[BusinessRule], question: str, tables: Sequence[str] = ()) -> tuple[BusinessRule, ...]:

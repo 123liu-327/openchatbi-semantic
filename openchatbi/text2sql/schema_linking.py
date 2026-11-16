@@ -12,11 +12,13 @@ from openchatbi.catalog.schema_retrival import col_dict, column_tables_mapping, 
 from openchatbi.constants import datetime_format
 from openchatbi.graph_state import SQLGraphState
 from openchatbi.prompts.system_prompt import get_table_selection_prompt_template
+from openchatbi.semantic.integration import prepare_selection
+from openchatbi.semantic.ports import SemanticProvider
 from openchatbi.text2sql.data import table_selection_example_dict, table_selection_retriever
 from openchatbi.utils import extract_json_from_answer, get_text_from_content, log
 
 
-def schema_linking(llm: BaseChatModel, catalog: CatalogStore):
+def schema_linking(llm: BaseChatModel, catalog: CatalogStore, *, semantic: SemanticProvider | None = None):
     """Create function for schema linking: select appropriate tables and columns for a question.
 
     Args:
@@ -247,6 +249,12 @@ def schema_linking(llm: BaseChatModel, catalog: CatalogStore):
         system_prompt = _build_table_selection_prompt(related_table_column_dict, similar_examples)
 
         # 4. Call LLM to select the table
-        return _call_llm_select(llm, system_prompt, messages, question, candidate_tables)
+        result = _call_llm_select(llm, system_prompt, messages, question, candidate_tables)
+        if semantic is None or getattr(semantic, "is_empty", False) is True:
+            return result
+        selection = prepare_selection(semantic, question, result.get("tables", []), catalog)
+        if selection.unreachable:
+            log(f"Semantic unreachable tables: {selection.unreachable}; {selection.reason}")
+        return {"tables": selection.tables}
 
     return _select

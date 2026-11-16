@@ -105,6 +105,7 @@ def test_empty_join_keys_rejected():
         "openchatbi.semantic.loader",
         "openchatbi.semantic.rules",
         "openchatbi.semantic.sources.json_file",
+        "openchatbi.semantic.integration",
     ],
 )
 def test_import_has_no_application_io_or_service_imports(module, tmp_path):

@@ -47,7 +47,15 @@ class JsonMetricSource:
                         {
                             "name": names[label],
                             "label": label,
-                            "aliases": list(dict.fromkeys([label, *row.get("aliases", [])])),
+                            "aliases": list(
+                                dict.fromkeys(
+                                    [
+                                        label,
+                                        *row.get("aliases", []),
+                                        *mapping.get("metric_aliases", {}).get(names[label], []),
+                                    ]
+                                )
+                            ),
                             "level": mapping["levels"][row["level"]],
                             "definition": row["definition"] + ("\n" + row["notes"] if row.get("notes") else ""),
                             "sql_template": sql,

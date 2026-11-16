@@ -6,6 +6,8 @@ rules:
   - 销售额
   - 营业收入
   - 营收
+  - revenue
+  - income
   require_columns:
   - sales_orders.net_amount
   forbid_columns: []
@@ -15,12 +17,24 @@ rules:
   provenance: chatbi_mvp:field_matcher.py#BUSINESS_RULES[0]
   exclude_any:
   - 含税
+  - tax-inclusive
+  - tax inclusive
+  - including tax
+  - gross revenue
 - name: revenue_forbids_gross_amount
   trigger_any:
   - 收入
   - 销售额
   - 营业收入
   - 营收
+  - 成本
+  - 毛利
+  - 利润
+  - revenue
+  - income
+  - cost
+  - profit
+  - margin
   require_columns: []
   forbid_columns:
   - sales_orders.gross_amount
@@ -29,11 +43,19 @@ rules:
   provenance: chatbi_mvp:field_matcher.py#BUSINESS_RULES[1]
   exclude_any:
   - 含税
+  - tax-inclusive
+  - tax inclusive
+  - including tax
+  - gross revenue
 - name: tax_inclusive_requires_gross_amount
   trigger_any:
   - 含税
   - 含税金额
   - 含税收入
+  - tax-inclusive
+  - tax inclusive
+  - including tax
+  - gross revenue
   require_columns:
   - sales_orders.gross_amount
   forbid_columns: []
@@ -46,6 +68,10 @@ rules:
   - 含税
   - 含税金额
   - 含税收入
+  - tax-inclusive
+  - tax inclusive
+  - including tax
+  - gross revenue
   require_columns: []
   forbid_columns:
   - sales_orders.net_amount
@@ -57,6 +83,9 @@ rules:
   - 成本
   - 毛利
   - 利润
+  - cost
+  - profit
+  - margin
   require_columns:
   - dim_products.material_cost
   - dim_products.labor_cost
@@ -73,6 +102,10 @@ rules:
   - 订单量
   - 订单数
   - 客单价
+  - revenue
+  - income
+  - order count
+  - average order value
   require_columns:
   - sales_orders.order_status
   forbid_columns: []
@@ -87,6 +120,9 @@ rules:
   - 换算
   - 折算
   - 统一币种
+  - currency
+  - exchange rate
+  - conversion
   require_columns:
   - exchange_rates.rate_to_cny
   - exchange_rates.rate_date
@@ -101,6 +137,8 @@ rules:
   - 总费用
   - 期间费用合计
   - 费用汇总
+  - total expenses
+  - operating expenses
   require_columns: []
   forbid_columns:
   - finance_expenses.marketing_expense

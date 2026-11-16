@@ -180,7 +180,10 @@ def build_sql_graph(
     graph.add_node("search_knowledge", search_tool_node)
     graph.add_node("ask_human", ask_human)
     graph.add_node("information_extraction", information_extraction(llm_with_tools))
-    graph.add_node("table_selection", schema_linking(default_llm, catalog))
+    graph.add_node(
+        "table_selection",
+        schema_linking(default_llm, catalog, **({"semantic": semantic} if semantic is not None else {})),
+    )
     graph.add_node("generate_sql", generate_sql_node)
     graph.add_node("execute_sql", execute_sql_node)
     graph.add_node("regenerate_sql", regenerate_sql_node)

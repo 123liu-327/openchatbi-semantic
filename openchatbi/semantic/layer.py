@@ -10,7 +10,7 @@ from openchatbi.semantic.config import SemanticConfig
 from openchatbi.semantic.join import JoinGraph
 from openchatbi.semantic.models import BusinessRule, JoinPlan, MetricSpec, SemanticBundle
 from openchatbi.semantic.render import render_semantic_block
-from openchatbi.semantic.rules import match_rules
+from openchatbi.semantic.rules import match_rules, validate_metric_rules
 
 
 class SemanticLayer:
@@ -44,6 +44,10 @@ class SemanticLayer:
 
     def metric(self, name: str) -> MetricSpec | None:
         return self._bundle.metrics.get(name)
+
+    @property
+    def is_empty(self) -> bool:
+        return not (self._bundle.metrics or self._bundle.rules or self._bundle.edges)
 
     def search_metrics(self, question: str, k: int = 5) -> tuple[MetricSpec, ...]:
         if k <= 0:
@@ -84,5 +88,7 @@ class SemanticLayer:
         """渲染成注入 prompt 的文本块。唯一允许产生自然语言的地方（见 render.py）。"""
         names = tuple(metric_names) or tuple(m.name for m in self.search_metrics(question))
         metrics = self.closure(names)
+        rules = self.rules_for(question, selected_tables)
+        validate_metric_rules(metrics, rules)
         plan = self.plan_join("", selected_tables)
-        return render_semantic_block(metrics=metrics, edges=plan.steps, rules=self.rules_for(question, selected_tables))
+        return render_semantic_block(metrics=metrics, edges=plan.steps, rules=rules)

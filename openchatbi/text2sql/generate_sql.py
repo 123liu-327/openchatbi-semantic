@@ -27,6 +27,7 @@ from openchatbi.memory_scoring import composite_score
 from openchatbi.observability.audit import AuditLogger
 from openchatbi.observability.context import get_run_context
 from openchatbi.prompts.system_prompt import get_text2sql_dialect_prompt_template
+from openchatbi.semantic.integration import prepare_selection
 from openchatbi.semantic.ports import SemanticProvider
 from openchatbi.semantic.rules import apply_rules
 from openchatbi.text2sql.confidence import CONFIDENCE_STATUS_EVALUATOR_ERROR, CONFIDENCE_STATUS_OK, SimpleSQLEvaluator
@@ -319,6 +320,11 @@ def create_sql_nodes(
         Returns:
             str: Formatted table schema prompt string.
         """
+        if semantic is not None:
+            selection = prepare_selection(semantic, question, tables_columns, catalog)
+            if tables_columns and not selection.tables:
+                raise ValueError(f"No compatible semantic schema: {selection.reason}")
+            tables_columns = selection.tables
         block = (
             semantic.render(question=question, selected_tables=[row["table"] for row in tables_columns])
             if semantic is not None

@@ -81,3 +81,16 @@ Live source regeneration: 11 files byte-identical; {'metrics': 13, 'rules': 8, '
 遗留业务问题：源“收入”和“含税”规则可同时触发互相冲突的硬约束，已保留并记录，T6 必须显式处理。多步指标的复合时间字段不适合单 `time_field`，当前置空并保留原文，由后续闭包取得各来源字段。SQLite demo 仅保留列、非空、主键、外键和样例值；不等价复制 MySQL 索引/CHECK/默认值（详见数据 README）。
 
 下一步：T3 领域模型、端口和无副作用骨架；随后 T4 闭包与确定性渲染。生产接入尚未开始。
+
+## 2026-11-16：T3，领域模型、端口与空实现
+
+- ✔ 新增 `openchatbi/semantic/{__init__,models,ports,layer}.py`，Provider 的方法签名和返回类型保持方案契约；门面方法明确抛出 `NotImplementedError`，不把骨架当作已可用的执行器。
+- ✔ 模型本身可构造和校验；数据对象冻结，bundle 的内部指标字典也阻止原地写入，输入字典修改不影响 bundle；JSON 往返和深拷贝正常。
+- ✔ 明确实施方案文字中的 formula/sql_template 二选一，以及非空规则触发词/关系键。为规则和关系各补充 `provenance` 默认字段，保留 T2 已有的来源元数据；消费方接口不变。
+- ✔ Pydantic 使用 `defer_build=True`。隔离测试曾发现其默认行为在定义模型类时扫描插件元数据，现推迟到显式构造模型时，未放宽无 I/O 断言。
+- ✔ 从仓库外目录启动新进程，禁止应用文件读取及 socket 构造后，包、模型、端口、门面分别 import 成功，未引入 catalog/config/LLM/Chroma。
+- ✔ 现有 13 指标、8 规则、6 关系均可转成模型，来源保留。
+
+验证：模型与导入测试 `18 passed`；`mypy openchatbi/semantic` 为 `Success: no issues found in 4 source files`；golden + semantic `95 passed in 9.09s`；全量 `771 passed, 1 skipped in 22.21s`；Black 全库通过（167 文件）；新增文件 Ruff 通过；严格数据校验 0 errors / 0 warnings。
+
+边界：上游生产文件改动 0，未加载配置、文件来源或建立全局 provider。下一任务 T4 仅实现独立的闭包与渲染纯函数；门面的配置装配按 T7 落地。

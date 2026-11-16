@@ -1,6 +1,7 @@
 import importlib
 import os
 from importlib.util import find_spec
+from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock
 
@@ -9,6 +10,8 @@ from pydantic import BaseModel
 
 from openchatbi.catalog.factory import create_catalog_store
 from openchatbi.constants import EXTRACTION_MAX_TOOL_ROUNDS, SQL_RESULT_LIMIT
+from openchatbi.semantic.config import SemanticConfig
+from openchatbi.semantic.config import SemanticSourceConfig as SemanticSourceConfig
 from openchatbi.utils import log
 
 
@@ -84,6 +87,7 @@ class Config(BaseModel):
 
     # Catalog Store
     catalog_store: Any = None
+    semantic: SemanticConfig = SemanticConfig()
 
     # Path to the vector database file
     vector_db_path: str | None = None
@@ -225,6 +229,7 @@ class ConfigLoader:
 
         self._process_config_dict(config_data)
         self._config = Config.from_dict(config_data)
+        self._config.semantic._config_path = Path(config_file).resolve()
 
     def _process_config_dict(self, config_data: dict[str, Any]) -> None:
         """

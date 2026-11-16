@@ -170,3 +170,15 @@ python scripts/validate_semantic_data.py --strict
 新增规则匹配、列 require/forbid 和缺表反补。`BusinessRule` 增加可选 `exclude_any` 数据字段，Provider 签名不变；迁移映射显式表达原注释“明确含税时例外”，不在 Python 中写业务词。成本规则按来源指标 notes 显式排除 standard_cost。未处理的 require/forbid 冲突带规则上下文抛错，不静默覆盖。
 
 done-when：20 个收入/成本/毛利问题中最终列集合违规数 0；成本问题反补产品表；含税例外保留 gross_amount 并排除 net_amount。专项测试 23 passed，数据 strict 0 errors / 0 warnings。运行环境仍为 Conda agent_study。
+
+T6 完整验证：全量 841 passed / 1 skipped；mypy 11 源文件通过；Black 全库 178 文件通过。
+
+## T7：配置驱动装配与只读 Provider
+
+新增无副作用的 semantic/config.py，由 config_loader 重导出配置类型；默认关闭。私有配置路径记录真实配置文件位置，语义来源相对它解析；程序化配置则相对仓库根。启用后显式加载 YAML、JSON 或 catalog 来源，按优先级合并同名指标/规则，平局报错；验证别名、依赖、表列引用和关系键，strict=False 的引用问题保存在 layer.warnings。
+
+完整实现 metric/search_metrics/closure/plan_join/rules_for/render；所有读取方法仅操作装配后的快照。无 embedding 时使用别名/展示名/机器键精确词匹配，最长匹配优先，避免“毛利率”被较短的“毛利”抢占。未为 BM25 引入上游 utils 的 LLM/config 导入栈。JSON 原版中文指标需显式 mapping_path 数据映射，不猜英文机器键；优先使用已清洗 YAML。
+
+disabled=False 的常规构造之外，enabled=False 使用空模型快照避免首次 Pydantic 插件构建产生文件读取；没有语义文件、catalog 或客户端 I/O。YAML 来源拒绝记录拼写错误。loader 不 import 源 MVP 项目。
+
+后续接入范围说明：原方案一处写“第4个上游文件停止”，另一处允许6个并明确列出 T7–T9 的接入文件。本轮用户已明确选择完成 T6–T9；按其具体交付范围实施，预计仅 config_loader.py、config.yaml.template、generate_sql.py、sql_graph.py、schema_linking.py 共5个上游文件，仍在C2的6文件上限内。其余新增能力位于 semantic/，不改变 SemanticProvider 的签名。

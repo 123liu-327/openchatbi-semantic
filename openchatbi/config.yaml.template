@@ -1,5 +1,15 @@
 organization: The Company
 dialect: presto
+semantic:
+  enabled: false
+  sources:
+    - {type: catalog, priority: 10}
+    - {type: yaml, path: ../example/semantic/metrics.yaml, priority: 20}
+    - {type: yaml, path: ../example/semantic/joins.yaml, priority: 20}
+    - {type: yaml, path: ../example/semantic/rules.yaml, priority: 20}
+  join_source: both
+  max_dependency_depth: 4
+  strict: false
 bi_config_file: example/bi.yaml
 
 # SQL Execution Result Limit Configuration

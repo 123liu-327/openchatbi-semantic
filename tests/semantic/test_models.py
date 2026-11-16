@@ -90,7 +90,14 @@ def test_empty_join_keys_rejected():
 
 @pytest.mark.parametrize(
     "module",
-    ["openchatbi.semantic", "openchatbi.semantic.models", "openchatbi.semantic.ports", "openchatbi.semantic.layer"],
+    [
+        "openchatbi.semantic",
+        "openchatbi.semantic.models",
+        "openchatbi.semantic.ports",
+        "openchatbi.semantic.layer",
+        "openchatbi.semantic.closure",
+        "openchatbi.semantic.render",
+    ],
 )
 def test_import_has_no_application_io_or_service_imports(module, tmp_path):
     root = str(Path(__file__).resolve().parents[2])

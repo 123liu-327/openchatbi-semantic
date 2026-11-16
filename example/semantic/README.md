@@ -9,15 +9,15 @@
 - `_unresolved.yaml`：未解析项、5 条旧版指标冲突、13 条结构转换证据和待复核说明。正常迁移的 `unresolved` 应为空。旧版 `indicators.json` 不进入有效指标文件。
 - `catalog/`：上游 `FileSystemCatalogStore` 可读取的 5 表、40 字段元数据及 `schema.sql`；SQLite 样例共 30 行，不需要源 MySQL。
 
-从仓库根运行，使用已有虚拟环境：
+使用 Conda 的 `agent_study` 环境，从仓库根运行：
 
 ```powershell
-.venv/Scripts/python.exe scripts/import_chatbi_mvp_kb.py --source D:/Agent_study/AI.20/chatbi_mvp
-.venv/Scripts/python.exe scripts/validate_semantic_data.py --strict
-.venv/Scripts/python.exe -m pytest tests/semantic/test_data_integrity.py -o addopts= -q
+conda run -n agent_study python scripts/import_chatbi_mvp_kb.py --source D:/Agent_study/AI.20/chatbi_mvp
+conda run -n agent_study python scripts/validate_semantic_data.py --strict
+conda run -n agent_study python -m pytest tests/semantic/test_data_integrity.py -o addopts= -q
 ```
 
-脚本内的相对路径均按脚本所在仓库根解析；从其他目录运行时，使用 Python 和脚本的绝对路径即可。可用 `--out`、`--mapping` 指定其他迁移目录和映射文件；校验器支持 `--data`、`--catalog`。不需要 API key、网络或 Docker。
+脚本内的相对路径均按脚本所在仓库根解析；从其他目录运行时，使用 Python 和脚本的绝对路径即可。当前 Conda Python 为 `C:/Users/Anconda/envs/agent_study/python.exe`，可直接调用，避免并行 `conda run` 的临时文件冲突。可用 `--out`、`--mapping` 指定其他迁移目录和映射文件；校验器支持 `--data`、`--catalog`。不需要 API key、网络或 Docker。
 
 catalog 通过静态解析源 `database/init.sql` 的 CREATE TABLE 和 INSERT VALUES 子集生成。SQLite 演示保留列类型、非空、主键、外键及样例值；MySQL 的索引、CHECK、默认值、数据库设置和存储引擎不迁移。遇到不支持的列定义会报带源文件定位的错误。源 `TABLE_METADATA`、`FIELD_METADATA` 的大段描述没有迁入，演示描述使用表名和列名，后续可人工补充。
 

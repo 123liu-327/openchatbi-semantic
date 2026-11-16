@@ -94,3 +94,23 @@ Live source regeneration: 11 files byte-identical; {'metrics': 13, 'rules': 8, '
 验证：模型与导入测试 `18 passed`；`mypy openchatbi/semantic` 为 `Success: no issues found in 4 source files`；golden + semantic `95 passed in 9.09s`；全量 `771 passed, 1 skipped in 22.21s`；Black 全库通过（167 文件）；新增文件 Ruff 通过；严格数据校验 0 errors / 0 warnings。
 
 边界：上游生产文件改动 0，未加载配置、文件来源或建立全局 provider。下一任务 T4 仅实现独立的闭包与渲染纯函数；门面的配置装配按 T7 落地。
+
+## 执行环境更正（用户明确指定）
+
+后续统一使用 Conda `agent_study`，不再调用仓库 `.venv`。Python 绝对路径为 `C:/Users/Anconda/envs/agent_study/python.exe`，版本 3.12.14，Pydantic 2.13.4。上文 `.venv` 结果保留为历史证据；T3 已在指定环境重跑 golden + semantic，95 例通过。
+
+该环境缺少 Black 和 mypy，已按项目 dev 依赖范围补装（Black 26.10.1、mypy 1.20.2）；已有 Ruff 0.16.7。发现 pandas 3.0.6 不满足项目 `>=2.2,<3`，已对齐到 2.3.3，未改依赖断言或项目约束。并行 `conda run` 出现临时文件冲突，后续直接调用上述环境 Python。
+
+新版 Ruff 对 str/Enum 报 UP042，但方案显式采用 `MetricLevel(str, Enum)`；保留其类型及 `str()` 行为，仅在该类上注明定点 noqa。全库检查仍有两个未改动的上游问题：`text2sql/errors.py:21` UP042、`tool/memory.py:199` B010，两个文件最近提交均为 baseline。
+
+## 2026-11-16：T4，递归依赖闭包与确定性渲染
+
+- ✔ `closure.py`：按根和依赖声明顺序做 DFS，根先输出、去重；根深度为 0。环、超深、未知依赖分别抛带依赖路径的 `MetricCycleError`、`MetricDepthError`、`UnknownMetricError`。
+- ✔ 即使共享依赖已输出，也检查后续路径的深度，避免先走浅路径导致深路径校验漏过。
+- ✔ `render.py`：唯一文本出口，固定 metrics → relationships → rules，空段落不输出；保持 SQL 原文、复合键 AND、JOIN 类型及硬约束。保留指标口径、过滤和时间字段，避免只输出公式丢失解释。
+- ✔ 新增逐字渲染快照、环检测、未知引用、深度边界、菱形依赖、多根去重测试；无 I/O 隔离导入测试扩展至 closure/render。
+- ✔ `tests/semantic/fixtures/closure_expectations.yaml` 手工标注 10 个迁移指标，实际全部逐项匹配；正确率 10/10，期望/实际闭包总条数 24/24；毛利率闭包包含毛利、收入和销售成本。
+
+指定 Conda Python 下验证：全量 `785 passed, 1 skipped in 24.72s`；`mypy openchatbi/semantic` 为 `Success: no issues found in 6 source files`；新增语义代码和测试 Ruff 通过；Black 全库通过（171 文件）；数据严格校验 0 errors / 0 warnings。全库 Ruff 的两个基线问题如上，未修改上游文件。
+
+边界：本次仅增加闭包/渲染纯函数，没有提前填充 T7 门面装配，也未接入 text2sql。渲染器只展示调用方传入的数据，不推断规则优先级或发明 JOIN 键。下一任务 T5 关系图与 JOIN 计划，随后按任务实现规则和装配。

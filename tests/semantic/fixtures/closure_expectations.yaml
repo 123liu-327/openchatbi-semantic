@@ -1,0 +1,12 @@
+version: 1
+cases:
+  revenue: [revenue]
+  cogs: [cogs]
+  gross_profit: [gross_profit, revenue, cogs]
+  gross_margin_rate: [gross_margin_rate, gross_profit, revenue, cogs]
+  profit: [profit, gross_profit, revenue, cogs, total_expense]
+  avg_order_value: [avg_order_value, revenue]
+  rd_expense_ratio: [rd_expense_ratio, revenue]
+  selling_expense_ratio: [selling_expense_ratio, revenue]
+  product_line_revenue: [product_line_revenue, revenue]
+  region_revenue: [region_revenue, revenue]

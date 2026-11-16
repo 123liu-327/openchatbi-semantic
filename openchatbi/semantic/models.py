@@ -14,7 +14,7 @@ class _SemanticModel(BaseModel):
     model_config = ConfigDict(frozen=True, defer_build=True)
 
 
-class MetricLevel(str, Enum):
+class MetricLevel(str, Enum):  # noqa: UP042 -- Preserve the published str/Enum contract, including str().
     ATOMIC = "atomic"
     DERIVED = "derived"
     COMPOSITE = "composite"

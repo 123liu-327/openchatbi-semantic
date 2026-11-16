@@ -1,0 +1,199 @@
+version: 1
+unresolved: []
+legacy_conflicts:
+- provenance: chatbi_mvp:indicators.json#收入
+  resolution: use indicators_full.json
+  differences:
+    aliases:
+      legacy:
+      - 销售额
+      - 营收
+      - 销售收入
+      full:
+      - 销售额
+      - 营收
+      - 销售收入
+      - 营业收入
+      - 总收入
+    definition:
+      legacy: 不含税销售收入，财务口径的销售额
+      full: 不含税销售收入，财务口径的销售额。统一使用 net_amount 字段，按订单日期的汇率折算为人民币。只统计已完成（completed）订单。
+    data_source:
+      legacy: sales_orders o JOIN exchange_rates r ON o.order_date = r.rate_date AND o.currency = r.currency
+      full: sales_orders JOIN exchange_rates
+- provenance: chatbi_mvp:indicators.json#销售成本
+  resolution: use indicators_full.json
+  differences:
+    aliases:
+      legacy:
+      - 成本
+      - 销售成本
+      full:
+      - 成本
+      - COGS
+      - 产品成本
+    definition:
+      legacy: 已售产品的实际成本，等于材料成本加人工成本乘以数量
+      full: 已售产品的实际成本，等于（材料成本 + 人工成本）× 数量。只统计已完成订单。
+    data_source:
+      legacy: sales_orders o JOIN dim_products p ON o.product_id = p.product_id
+      full: sales_orders JOIN dim_products
+- provenance: chatbi_mvp:indicators.json#毛利
+  resolution: use indicators_full.json
+  differences:
+    aliases:
+      legacy:
+      - 毛利润
+      - gross_profit
+      full:
+      - 毛利润
+      - gross_profit
+      - 销售毛利
+    definition:
+      legacy: 销售收入减去销售成本
+      full: 销售收入减去销售成本。反映产品本身的盈利能力。
+    formula:
+      legacy: revenue - cost
+      full: SUM(o.net_amount * r.rate_to_cny) - SUM((p.material_cost + p.labor_cost) * o.quantity)
+    data_source:
+      legacy: 需同时关联 sales_orders、dim_products、exchange_rates
+      full: sales_orders JOIN dim_products JOIN exchange_rates
+- provenance: chatbi_mvp:indicators.json#期间费用
+  resolution: use indicators_full.json
+  differences:
+    aliases:
+      legacy:
+      - 费用
+      - 总费用
+      full:
+      - 费用
+      - 总费用
+      - 运营费用
+      - 期间费用合计
+    definition:
+      legacy: 企业日常经营发生的费用，包括研发、销售、管理、财务四大费用
+      full: 企业日常经营的四大费用汇总：研发费用 + 销售费用 + 管理费用 + 财务费用。注意 selling_expense 已包含其子项（marketing/logistics/warranty），不可重复计算。
+- provenance: chatbi_mvp:indicators.json#利润
+  resolution: use indicators_full.json
+  differences:
+    aliases:
+      legacy:
+      - 净利润
+      - 经营利润
+      - profit
+      full:
+      - 净利润
+      - 经营利润
+      - profit
+      - 营业利润
+    definition:
+      legacy: 企业经营利润，等于毛利减去期间费用
+      full: 企业经营利润 = 毛利 - 期间费用。需要跨两个数据源计算：订单相关（毛利）和费用表（期间费用）。
+    formula:
+      legacy: gross_profit - total_expense
+      full: 毛利 - 期间费用
+    data_source:
+      legacy: 需跨 sales_orders、dim_products、exchange_rates、finance_expenses
+      full: sales_orders + dim_products + exchange_rates + finance_expenses
+conversions:
+- provenance: chatbi_mvp:indicators_full.json#收入
+  name: revenue
+  original_formula: SUM(o.net_amount * r.rate_to_cny)
+  original_sql_template: SELECT SUM(o.net_amount * r.rate_to_cny) AS revenue FROM sales_orders o JOIN exchange_rates
+    r ON o.order_date = r.rate_date AND o.currency = r.currency WHERE o.order_status = 'completed'
+  original_time_field: o.order_date
+  requires_multi_step: false
+- provenance: chatbi_mvp:indicators_full.json#销售成本
+  name: cogs
+  original_formula: SUM((p.material_cost + p.labor_cost) * o.quantity)
+  original_sql_template: SELECT SUM((p.material_cost + p.labor_cost) * o.quantity) AS cost FROM sales_orders o JOIN
+    dim_products p ON o.product_id = p.product_id WHERE o.order_status = 'completed'
+  original_time_field: o.order_date
+  requires_multi_step: false
+- provenance: chatbi_mvp:indicators_full.json#毛利
+  name: gross_profit
+  original_formula: SUM(o.net_amount * r.rate_to_cny) - SUM((p.material_cost + p.labor_cost) * o.quantity)
+  original_sql_template: SELECT SUM(o.net_amount * r.rate_to_cny) - SUM((p.material_cost + p.labor_cost) * o.quantity)
+    AS gross_profit FROM sales_orders o JOIN dim_products p ON o.product_id = p.product_id JOIN exchange_rates r
+    ON o.order_date = r.rate_date AND o.currency = r.currency WHERE o.order_status = 'completed'
+  original_time_field: o.order_date
+  requires_multi_step: false
+- provenance: chatbi_mvp:indicators_full.json#毛利率
+  name: gross_margin_rate
+  original_formula: (毛利 / 收入) * 100
+  original_sql_template: SELECT (SUM(o.net_amount * r.rate_to_cny) - SUM((p.material_cost + p.labor_cost) * o.quantity))
+    / SUM(o.net_amount * r.rate_to_cny) * 100 AS gross_margin_pct FROM sales_orders o JOIN dim_products p ON o.product_id
+    = p.product_id JOIN exchange_rates r ON o.order_date = r.rate_date AND o.currency = r.currency WHERE o.order_status
+    = 'completed'
+  original_time_field: o.order_date
+  requires_multi_step: false
+- provenance: chatbi_mvp:indicators_full.json#期间费用
+  name: total_expense
+  original_formula: SUM(rd_expense + selling_expense + admin_expense + finance_expense)
+  original_sql_template: SELECT SUM(rd_expense + selling_expense + admin_expense + finance_expense) AS total_expense
+    FROM finance_expenses
+  original_time_field: expense_date
+  requires_multi_step: false
+- provenance: chatbi_mvp:indicators_full.json#利润
+  name: profit
+  original_formula: 毛利 - 期间费用
+  original_sql_template: 需分两步查询：1) 计算毛利（from sales_orders）2) 计算期间费用（from finance_expenses）3) 相减得利润
+  original_time_field: o.order_date / expense_date
+  requires_multi_step: true
+- provenance: chatbi_mvp:indicators_full.json#客单价
+  name: avg_order_value
+  original_formula: SUM(net_amount * rate_to_cny) / COUNT(DISTINCT order_id)
+  original_sql_template: SELECT SUM(o.net_amount * r.rate_to_cny) / COUNT(DISTINCT o.order_id) AS avg_order_value
+    FROM sales_orders o JOIN exchange_rates r ON o.order_date = r.rate_date AND o.currency = r.currency WHERE o.order_status
+    = 'completed'
+  original_time_field: o.order_date
+  requires_multi_step: false
+- provenance: chatbi_mvp:indicators_full.json#订单量
+  name: order_count
+  original_formula: COUNT(*) WHERE order_status = 'completed'
+  original_sql_template: SELECT COUNT(*) AS order_count FROM sales_orders WHERE order_status = 'completed'
+  original_time_field: order_date
+  requires_multi_step: false
+- provenance: chatbi_mvp:indicators_full.json#研发费用率
+  name: rd_expense_ratio
+  original_formula: SUM(rd_expense) / 收入 * 100
+  original_sql_template: 需分两步：1) SUM(rd_expense) from finance_expenses 2) 收入 from sales_orders 3) 两者相除
+  original_time_field: expense_date / o.order_date
+  requires_multi_step: true
+- provenance: chatbi_mvp:indicators_full.json#销售费用率
+  name: selling_expense_ratio
+  original_formula: SUM(selling_expense) / 收入 * 100
+  original_sql_template: 需分两步计算
+  original_time_field: expense_date / o.order_date
+  requires_multi_step: true
+- provenance: chatbi_mvp:indicators_full.json#产品线收入
+  name: product_line_revenue
+  original_formula: SUM(o.net_amount * r.rate_to_cny) GROUP BY p.product_line
+  original_sql_template: SELECT p.product_line, SUM(o.net_amount * r.rate_to_cny) AS revenue FROM sales_orders o
+    JOIN dim_products p ON o.product_id = p.product_id JOIN exchange_rates r ON o.order_date = r.rate_date AND o.currency
+    = r.currency WHERE o.order_status = 'completed' GROUP BY p.product_line
+  original_time_field: o.order_date
+  requires_multi_step: false
+- provenance: chatbi_mvp:indicators_full.json#区域收入
+  name: region_revenue
+  original_formula: SUM(o.net_amount * r.rate_to_cny) GROUP BY o.region
+  original_sql_template: SELECT o.region, SUM(o.net_amount * r.rate_to_cny) AS revenue FROM sales_orders o JOIN
+    exchange_rates r ON o.order_date = r.rate_date AND o.currency = r.currency WHERE o.order_status = 'completed'
+    GROUP BY o.region
+  original_time_field: o.order_date
+  requires_multi_step: false
+- provenance: chatbi_mvp:indicators_full.json#销量
+  name: total_quantity
+  original_formula: SUM(quantity) WHERE order_status = 'completed'
+  original_sql_template: SELECT SUM(quantity) AS total_quantity FROM sales_orders WHERE order_status = 'completed'
+  original_time_field: order_date
+  requires_multi_step: false
+excluded_tables:
+- hr_attendance_records
+- iot_device_alerts
+- legal_contract_archive
+- warehouse_temperature_logs
+review_notes:
+- 两套收入和含税规则在“含税收入”等问题中会同时触发，保留源规则，T6 必须处理冲突，不能隐式覆盖。
+- 数据源含 SQL JOIN 和加号两种结构；迁移只拆解显式表名，不改写计算口径。
+- 多步指标的原始公式、步骤和复合时间字段保留在迁移报告 conversions 中，运行时依赖 requires_multi_step。

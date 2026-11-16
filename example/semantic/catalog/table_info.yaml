@@ -1,0 +1,26 @@
+? ''
+: dim_customers:
+    description: dim_customers
+    selection_rule: ''
+    sql_rule: ''
+    provenance: chatbi_mvp:database/init.sql#dim_customers
+  dim_products:
+    description: dim_products
+    selection_rule: ''
+    sql_rule: ''
+    provenance: chatbi_mvp:database/init.sql#dim_products
+  exchange_rates:
+    description: exchange_rates
+    selection_rule: ''
+    sql_rule: ''
+    provenance: chatbi_mvp:database/init.sql#exchange_rates
+  finance_expenses:
+    description: finance_expenses
+    selection_rule: ''
+    sql_rule: ''
+    provenance: chatbi_mvp:database/init.sql#finance_expenses
+  sales_orders:
+    description: sales_orders
+    selection_rule: ''
+    sql_rule: ''
+    provenance: chatbi_mvp:database/init.sql#sales_orders

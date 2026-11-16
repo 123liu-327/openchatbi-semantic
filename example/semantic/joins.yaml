@@ -1,0 +1,60 @@
+version: 1
+edges:
+- child: sales_orders
+  parent: dim_customers
+  keys:
+  - left: customer_id
+    right: customer_id
+  relationship: many_to_one
+  join_type: inner
+  source: declared
+  provenance: chatbi_mvp:join_resolver.py#TABLE_RELATIONSHIPS.sales_orders[0]
+- child: sales_orders
+  parent: dim_products
+  keys:
+  - left: product_id
+    right: product_id
+  relationship: many_to_one
+  join_type: inner
+  source: declared
+  provenance: chatbi_mvp:join_resolver.py#TABLE_RELATIONSHIPS.sales_orders[1]
+- child: sales_orders
+  parent: exchange_rates
+  keys:
+  - left: order_date
+    right: rate_date
+  - left: currency
+    right: currency
+  relationship: many_to_one
+  join_type: left
+  source: declared
+  provenance: chatbi_mvp:join_resolver.py#TABLE_RELATIONSHIPS.sales_orders[2]
+- child: dim_customers
+  parent: sales_orders
+  keys:
+  - left: customer_id
+    right: customer_id
+  relationship: one_to_many
+  join_type: left
+  source: declared
+  provenance: chatbi_mvp:join_resolver.py#TABLE_RELATIONSHIPS.dim_customers[0]
+- child: dim_products
+  parent: sales_orders
+  keys:
+  - left: product_id
+    right: product_id
+  relationship: one_to_many
+  join_type: left
+  source: declared
+  provenance: chatbi_mvp:join_resolver.py#TABLE_RELATIONSHIPS.dim_products[0]
+- child: exchange_rates
+  parent: sales_orders
+  keys:
+  - left: rate_date
+    right: order_date
+  - left: currency
+    right: currency
+  relationship: one_to_many
+  join_type: left
+  source: declared
+  provenance: chatbi_mvp:join_resolver.py#TABLE_RELATIONSHIPS.exchange_rates[0]

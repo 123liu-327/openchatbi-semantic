@@ -1,0 +1,106 @@
+version: 1
+rules:
+- name: revenue_requires_net_amount
+  trigger_any:
+  - 收入
+  - 销售额
+  - 营业收入
+  - 营收
+  require_columns:
+  - sales_orders.net_amount
+  forbid_columns: []
+  require_tables:
+  - sales_orders
+  note: 收入口径统一使用 net_amount（不含税）
+  provenance: chatbi_mvp:field_matcher.py#BUSINESS_RULES[0]
+- name: revenue_forbids_gross_amount
+  trigger_any:
+  - 收入
+  - 销售额
+  - 营业收入
+  - 营收
+  require_columns: []
+  forbid_columns:
+  - sales_orders.gross_amount
+  require_tables: []
+  note: 除非明确要求含税，否则排除 gross_amount
+  provenance: chatbi_mvp:field_matcher.py#BUSINESS_RULES[1]
+- name: tax_inclusive_requires_gross_amount
+  trigger_any:
+  - 含税
+  - 含税金额
+  - 含税收入
+  require_columns:
+  - sales_orders.gross_amount
+  forbid_columns: []
+  require_tables:
+  - sales_orders
+  note: 用户明确要求含税时使用 gross_amount
+  provenance: chatbi_mvp:field_matcher.py#BUSINESS_RULES[2]
+- name: tax_inclusive_forbids_net_amount
+  trigger_any:
+  - 含税
+  - 含税金额
+  - 含税收入
+  require_columns: []
+  forbid_columns:
+  - sales_orders.net_amount
+  require_tables: []
+  note: 用户明确要求含税时禁用 net_amount
+  provenance: chatbi_mvp:field_matcher.py#BUSINESS_RULES[3]
+- name: cost_requires_material_and_labor
+  trigger_any:
+  - 成本
+  - 毛利
+  - 利润
+  require_columns:
+  - dim_products.material_cost
+  - dim_products.labor_cost
+  forbid_columns: []
+  require_tables:
+  - dim_products
+  note: 成本计算使用 material_cost + labor_cost
+  provenance: chatbi_mvp:field_matcher.py#BUSINESS_RULES[4]
+- name: completed_order_filter
+  trigger_any:
+  - 收入
+  - 销售额
+  - 订单量
+  - 订单数
+  - 客单价
+  require_columns:
+  - sales_orders.order_status
+  forbid_columns: []
+  require_tables:
+  - sales_orders
+  note: 收入类统计必须包含 order_status 用于过滤 completed
+  provenance: chatbi_mvp:field_matcher.py#BUSINESS_RULES[5]
+- name: currency_conversion_fields
+  trigger_any:
+  - 人民币
+  - 汇率
+  - 换算
+  - 折算
+  - 统一币种
+  require_columns:
+  - exchange_rates.rate_to_cny
+  - exchange_rates.rate_date
+  - exchange_rates.currency
+  forbid_columns: []
+  require_tables:
+  - exchange_rates
+  note: 涉及汇率换算时必须引入 exchange_rates 表字段
+  provenance: chatbi_mvp:field_matcher.py#BUSINESS_RULES[6]
+- name: expense_subtotal_exclusion
+  trigger_any:
+  - 总费用
+  - 期间费用合计
+  - 费用汇总
+  require_columns: []
+  forbid_columns:
+  - finance_expenses.marketing_expense
+  - finance_expenses.logistics_expense
+  - finance_expenses.warranty_expense
+  require_tables: []
+  note: 汇总费用时排除子项字段，避免重复计算
+  provenance: chatbi_mvp:field_matcher.py#BUSINESS_RULES[7]

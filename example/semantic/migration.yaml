@@ -1,0 +1,52 @@
+version: 1
+levels:
+  原子指标: atomic
+  派生指标: derived
+  复合指标: composite
+metric_names:
+  收入: revenue
+  销售成本: cogs
+  毛利: gross_profit
+  毛利率: gross_margin_rate
+  期间费用: total_expense
+  利润: profit
+  客单价: avg_order_value
+  订单量: order_count
+  研发费用率: rd_expense_ratio
+  销售费用率: selling_expense_ratio
+  产品线收入: product_line_revenue
+  区域收入: region_revenue
+  销量: total_quantity
+multi_step_metrics: [利润, 研发费用率, 销售费用率]
+rule_names:
+  - revenue_requires_net_amount
+  - revenue_forbids_gross_amount
+  - tax_inclusive_requires_gross_amount
+  - tax_inclusive_forbids_net_amount
+  - cost_requires_material_and_labor
+  - completed_order_filter
+  - currency_conversion_fields
+  - expense_subtotal_exclusion
+include_tables: [dim_customers, dim_products, exchange_rates, finance_expenses, sales_orders]
+exclude_tables: [hr_attendance_records, iot_device_alerts, legal_contract_archive, warehouse_temperature_logs]
+metric_columns:
+  - dim_products.standard_cost
+  - dim_products.material_cost
+  - dim_products.labor_cost
+  - exchange_rates.rate_to_cny
+  - finance_expenses.rd_expense
+  - finance_expenses.selling_expense
+  - finance_expenses.admin_expense
+  - finance_expenses.finance_expense
+  - finance_expenses.marketing_expense
+  - finance_expenses.logistics_expense
+  - finance_expenses.warranty_expense
+  - sales_orders.quantity
+  - sales_orders.unit_price
+  - sales_orders.discount_amount
+  - sales_orders.gross_amount
+  - sales_orders.net_amount
+review_notes:
+  - 两套收入和含税规则在“含税收入”等问题中会同时触发，保留源规则，T6 必须处理冲突，不能隐式覆盖。
+  - 数据源含 SQL JOIN 和加号两种结构；迁移只拆解显式表名，不改写计算口径。
+  - 多步指标的原始公式、步骤和复合时间字段保留在迁移报告 conversions 中，运行时依赖 requires_multi_step。

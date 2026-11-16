@@ -82,7 +82,7 @@ def test_corpus_has_at_least_20_cases():
 
 def test_runledger_cases_use_strict_schema():
     for path in glob.glob(os.path.join(_CASES_DIR, "*.yaml")):
-        with open(path) as fh:
+        with open(path, encoding="utf-8") as fh:
             case = yaml.safe_load(fh)
         assert set(case) <= {"id", "description", "input", "cassette", "assertions", "budgets"}, path
         assert "category" not in case, path
@@ -93,7 +93,7 @@ def test_judge_cases_have_category_and_gold():
     paths = glob.glob(os.path.join(_JUDGE_CASES_DIR, "*.yaml"))
     assert paths, "No Judge case YAML files found"
     for path in paths:
-        with open(path) as fh:
+        with open(path, encoding="utf-8") as fh:
             case = yaml.safe_load(fh)
         assert "category" in case, path
         assert "gold" in case, path
@@ -103,7 +103,7 @@ def test_judge_cases_have_category_and_gold():
 def test_gold_trajectory_matches_driver_table():
     agent = _load_agent()
     for path in glob.glob(os.path.join(_JUDGE_CASES_DIR, "*.yaml")):
-        with open(path) as fh:
+        with open(path, encoding="utf-8") as fh:
             case = yaml.safe_load(fh)
         prompt = case["input"]["prompt"]
         driver_traj = [t for t in agent._TRAJECTORIES[prompt] if t is not None]
@@ -128,7 +128,7 @@ def test_cassette_args_byte_match_driver():
 
     cases_with_cassettes = 0
     for path in case_paths:
-        with open(path) as fh:
+        with open(path, encoding="utf-8") as fh:
             case = yaml.safe_load(fh)
         cassette_rel = case.get("cassette")
         if not cassette_rel:
@@ -144,7 +144,7 @@ def test_cassette_args_byte_match_driver():
 
         cassette_path = os.path.join(_evals_dir, cassette_rel)
         cassette_lines = []
-        with open(cassette_path) as cf:
+        with open(cassette_path, encoding="utf-8") as cf:
             for line in cf:
                 line = line.strip()
                 if line:

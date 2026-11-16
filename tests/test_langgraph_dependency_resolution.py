@@ -15,7 +15,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 
 def _project_config() -> dict:
-    return tomllib.loads((PROJECT_ROOT / "pyproject.toml").read_text())
+    return tomllib.loads((PROJECT_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
 
 
 def test_langgraph_resolves_to_required_version() -> None:

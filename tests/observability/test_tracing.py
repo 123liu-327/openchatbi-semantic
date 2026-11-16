@@ -55,7 +55,7 @@ def test_build_run_config_preserves_base() -> None:
 
 
 def test_langfuse_observability_extra_requires_v4_fast_preview_sdk() -> None:
-    pyproject = tomllib.loads(Path("pyproject.toml").read_text())
+    pyproject = tomllib.loads(Path("pyproject.toml").read_text(encoding="utf-8"))
     deps = pyproject["project"]["optional-dependencies"]["observability"]
 
     assert "langfuse>=4.7,<5" in deps

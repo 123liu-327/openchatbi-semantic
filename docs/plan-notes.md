@@ -164,3 +164,9 @@ python scripts/validate_semantic_data.py --strict
 这一数字衡量新增确定性规划器，不是 LLM 问答端到端命中率；上游原无规划器，不虚构改造前模型准确率。M2 问答链路对比仍需 T8 接入后验证。
 
 遗留边界：当前无自连接别名/同端点多角色选择，不做跨 schema 扫描或方言引号编译。原外键 loader 会把反射异常记录 warning 后返回 []，保留该行为并测试日志可见性；不能把“无边”当成已确认不存在外键。部分规划的 SQL 只包含可达部分，消费方必须先处理 unreachable。未修改任何上游生产文件，未改现有 golden 测试。
+
+## T6：硬规则与显式例外
+
+新增规则匹配、列 require/forbid 和缺表反补。`BusinessRule` 增加可选 `exclude_any` 数据字段，Provider 签名不变；迁移映射显式表达原注释“明确含税时例外”，不在 Python 中写业务词。成本规则按来源指标 notes 显式排除 standard_cost。未处理的 require/forbid 冲突带规则上下文抛错，不静默覆盖。
+
+done-when：20 个收入/成本/毛利问题中最终列集合违规数 0；成本问题反补产品表；含税例外保留 gross_amount 并排除 net_amount。专项测试 23 passed，数据 strict 0 errors / 0 warnings。运行环境仍为 Conda agent_study。

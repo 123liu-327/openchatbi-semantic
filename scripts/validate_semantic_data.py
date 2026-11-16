@@ -171,6 +171,7 @@ def validate_directory(directory: Path, catalog_path: Path | None = None, *, str
     for index, row in enumerate(docs["rules"]):
         if not strings(file, index, row, "trigger_any"):
             fail(file, index, "trigger_any", "at least one trigger required")
+        strings(file, index, row, "exclude_any")
         scope = strings(file, index, row, "scope_tables")
         required = strings(file, index, row, "require_tables")
         for table in [*scope, *required]:

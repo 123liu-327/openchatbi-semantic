@@ -233,6 +233,8 @@ def migrate(source: Path, out: Path, mapping_path: Path) -> dict:
             }
         )
     graph = literal_constant(source / "join_resolver.py", "TABLE_RELATIONSHIPS")
+    for rule in rules:
+        rule.update(mapping.get("rule_overrides", {}).get(rule["name"], {}))
     primary_keys = {}
     for table, body in re.findall(
         r"CREATE TABLE IF NOT EXISTS (\w+)\s*\((.*?)\n\);", read_text(out / "catalog/schema.sql"), re.S

@@ -50,6 +50,7 @@ class MetricSpec(_SemanticModel):
 class BusinessRule(_SemanticModel):
     name: str
     trigger_any: tuple[str, ...] = Field(min_length=1)
+    exclude_any: tuple[str, ...] = ()
     scope_tables: tuple[str, ...] = ()
     require_columns: tuple[str, ...] = ()
     forbid_columns: tuple[str, ...] = ()

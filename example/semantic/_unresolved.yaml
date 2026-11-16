@@ -194,6 +194,6 @@ excluded_tables:
 - legal_contract_archive
 - warehouse_temperature_logs
 review_notes:
-- 两套收入和含税规则在“含税收入”等问题中会同时触发，保留源规则，T6 必须处理冲突，不能隐式覆盖。
+- T6 通过 exclude_any 显式表达原注释中的含税例外；成本规则按来源指标 notes 硬排除 standard_cost。
 - 数据源含 SQL JOIN 和加号两种结构；迁移只拆解显式表名，不改写计算口径。
 - 多步指标的原始公式、步骤和复合时间字段保留在迁移报告 conversions 中，运行时依赖 requires_multi_step。

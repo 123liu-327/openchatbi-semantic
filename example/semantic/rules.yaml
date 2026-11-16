@@ -13,6 +13,8 @@ rules:
   - sales_orders
   note: 收入口径统一使用 net_amount（不含税）
   provenance: chatbi_mvp:field_matcher.py#BUSINESS_RULES[0]
+  exclude_any:
+  - 含税
 - name: revenue_forbids_gross_amount
   trigger_any:
   - 收入
@@ -25,6 +27,8 @@ rules:
   require_tables: []
   note: 除非明确要求含税，否则排除 gross_amount
   provenance: chatbi_mvp:field_matcher.py#BUSINESS_RULES[1]
+  exclude_any:
+  - 含税
 - name: tax_inclusive_requires_gross_amount
   trigger_any:
   - 含税
@@ -56,7 +60,8 @@ rules:
   require_columns:
   - dim_products.material_cost
   - dim_products.labor_cost
-  forbid_columns: []
+  forbid_columns:
+  - dim_products.standard_cost
   require_tables:
   - dim_products
   note: 成本计算使用 material_cost + labor_cost

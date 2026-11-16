@@ -182,3 +182,13 @@ T6 完整验证：全量 841 passed / 1 skipped；mypy 11 源文件通过；Blac
 disabled=False 的常规构造之外，enabled=False 使用空模型快照避免首次 Pydantic 插件构建产生文件读取；没有语义文件、catalog 或客户端 I/O。YAML 来源拒绝记录拼写错误。loader 不 import 源 MVP 项目。
 
 后续接入范围说明：原方案一处写“第4个上游文件停止”，另一处允许6个并明确列出 T7–T9 的接入文件。本轮用户已明确选择完成 T6–T9；按其具体交付范围实施，预计仅 config_loader.py、config.yaml.template、generate_sql.py、sql_graph.py、schema_linking.py 共5个上游文件，仍在C2的6文件上限内。其余新增能力位于 semantic/，不改变 SemanticProvider 的签名。
+
+T7 全量验证 857 passed / 1 skipped；Black 182 文件通过；mypy 14 源文件通过。
+
+## T8：接入 SQL prompt
+
+create_sql_nodes/build_sql_graph 新增可选的 keyword-only semantic 参数；图装配在显式开启时调用 from_config，禁用时走旧参数路径。语义块每次 schema prompt 只追加一次，首次、重试、评分均透传同一问题；无块时完整保留旧派生指标和原列集合。
+
+启用规则时在 schema 注入点再次硬过滤列，并可反补规则表；否则上游原本忽略 selected columns、总是读取全表字段的行为会重新泄露禁用列。没有更改禁用时行为或旧 golden 断言。None/空 provider 逐字比较、启用三段只出现一次及 forbidden Column 不出现均有新增测试。
+
+T8 验证：首次/重试和空 provider 共4例；golden+生成节点专项119 passed；全量861 passed / 1 skipped。原 golden 文件未改动。

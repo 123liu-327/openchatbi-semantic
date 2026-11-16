@@ -17,6 +17,7 @@ from openchatbi.catalog import CatalogStore
 from openchatbi.constants import SQL_EXECUTE_TIMEOUT, SQL_SUCCESS
 from openchatbi.graph_state import SQLGraphState, SQLInputState, SQLOutputState
 from openchatbi.llm.llm import get_llm, get_text2sql_llm
+from openchatbi.semantic.ports import SemanticProvider
 from openchatbi.text2sql.data import get_learned_sql_store
 from openchatbi.text2sql.errors import RecoveryStrategy
 from openchatbi.text2sql.extraction import information_extraction, information_extraction_conditional_edges
@@ -121,7 +122,12 @@ def route_after_confidence(state: SQLGraphState) -> str:
 
 
 def build_sql_graph(
-    catalog: CatalogStore, checkpointer: Checkpointer, memory_store: BaseStore, llm_provider: str | None = None
+    catalog: CatalogStore,
+    checkpointer: Checkpointer,
+    memory_store: BaseStore,
+    llm_provider: str | None = None,
+    *,
+    semantic: SemanticProvider | None = None,
 ) -> CompiledStateGraph:
     """Build SQL generation graph with all nodes and edges.
 
@@ -133,6 +139,14 @@ def build_sql_graph(
     Returns:
         CompiledStateGraph: Compiled SQL graph ready for execution.
     """
+    if semantic is None and getattr(getattr(config.get(), "semantic", None), "enabled", False) is True:
+        from openchatbi.semantic.layer import SemanticLayer
+
+        semantic = SemanticLayer.from_config(config.get(), catalog)
+        for warning in semantic.warnings:
+            from openchatbi.utils import log
+
+            log(f"Semantic warning: {warning}")
     tools: list[BaseTool] = [search_knowledge, AskHuman]  # type: ignore[list-item]
     search_tool_node = ToolNode([search_knowledge])
     default_llm = get_llm(llm_provider)
@@ -156,6 +170,7 @@ def build_sql_graph(
         dialect=config.get().dialect,
         visualization_mode=config.get().visualization_mode,
         learned_sql_store=get_learned_sql_store(),
+        **({"semantic": semantic} if semantic is not None else {}),
     )
 
     # Define the SQL generation graph

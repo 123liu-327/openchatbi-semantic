@@ -27,6 +27,8 @@ from openchatbi.memory_scoring import composite_score
 from openchatbi.observability.audit import AuditLogger
 from openchatbi.observability.context import get_run_context
 from openchatbi.prompts.system_prompt import get_text2sql_dialect_prompt_template
+from openchatbi.semantic.ports import SemanticProvider
+from openchatbi.semantic.rules import apply_rules
 from openchatbi.text2sql.confidence import CONFIDENCE_STATUS_EVALUATOR_ERROR, CONFIDENCE_STATUS_OK, SimpleSQLEvaluator
 from openchatbi.text2sql.data import get_learned_sql_store, sql_example_dicts, sql_example_retriever
 from openchatbi.text2sql.errors import (
@@ -279,6 +281,8 @@ def create_sql_nodes(
     dialect: str,
     visualization_mode: str | None = "rule",
     learned_sql_store: Any | None = None,
+    *,
+    semantic: SemanticProvider | None = None,
 ) -> tuple[Callable, Callable, Callable, Callable, Callable, Callable]:
     """Creates the SQL processing nodes for LangGraph.
 
@@ -305,7 +309,7 @@ def create_sql_nodes(
             f""" "{alias_prompt}{column['description']}"),"""
         )
 
-    def _get_table_schema_prompt(tables_columns: list[dict[str, Any]]) -> str:
+    def _get_table_schema_prompt(tables_columns: list[dict[str, Any]], question: str = "") -> str:
         """Generates a prompt string for table schemas, including table description,
         columns, derived metrics and rules when writting SQL
 
@@ -315,6 +319,18 @@ def create_sql_nodes(
         Returns:
             str: Formatted table schema prompt string.
         """
+        block = (
+            semantic.render(question=question, selected_tables=[row["table"] for row in tables_columns])
+            if semantic is not None
+            else ""
+        )
+        active_rules = (
+            semantic.rules_for(question, [row["table"] for row in tables_columns])
+            if semantic is not None and block
+            else ()
+        )
+        if active_rules:
+            tables_columns = apply_rules([{**row, "columns": []} for row in tables_columns], active_rules, catalog)
         schema_prompt = []
         for table_dict in tables_columns:
             table_name = table_dict["table"]
@@ -323,13 +339,18 @@ def create_sql_nodes(
             table_info = catalog.get_table_information(table_name)
             single_table_schema_prompt = f"## Table {table_name}\n{table_info['description']}\n"
             columns = catalog.get_column_list(table_name)
+            if active_rules:
+                allowed = set(table_dict["columns"])
+                columns = [column for column in columns if column["column_name"] in allowed]
             single_table_schema_prompt += _COLUMN_PROMPT_TEMPLATE.format(
                 "\n".join([_get_column_prompt(column) for column in columns])
             )
-            single_table_schema_prompt += table_info.get("derived_metric", "")
+            if not block:
+                single_table_schema_prompt += table_info.get("derived_metric", "")
             single_table_schema_prompt += table_info["sql_rule"]
             schema_prompt.append(single_table_schema_prompt)
-        return "\n".join(schema_prompt)
+        prompt = "\n".join(schema_prompt)
+        return prompt + "\n" + block if block else prompt
 
     def _get_relevant_sql_examples_prompt(question, tables_columns: list[dict[str, Any]]) -> str:
         """Retrieves relevant SQL examples based on the question and selected tables.
@@ -552,7 +573,7 @@ def create_sql_nodes(
         tables_columns = state["tables"]
         system_prompt = (
             get_text2sql_dialect_prompt_template(dialect)
-            .replace("[table_schema]", _get_table_schema_prompt(tables_columns))
+            .replace("[table_schema]", _get_table_schema_prompt(tables_columns, question))
             .replace("[examples]", _get_relevant_sql_examples_prompt(question, tables_columns))
             .replace("[time_field_placeholder]", datetime.datetime.now().strftime(datetime_format))
         )
@@ -708,7 +729,7 @@ def create_sql_nodes(
 
         system_prompt = (
             get_text2sql_dialect_prompt_template(dialect)
-            .replace("[table_schema]", _get_table_schema_prompt(tables))
+            .replace("[table_schema]", _get_table_schema_prompt(tables, question))
             .replace("[examples]", _get_relevant_sql_examples_prompt(question, tables))
             .replace("[time_field_placeholder]", datetime.datetime.now().strftime(datetime_format))
         )
@@ -829,7 +850,7 @@ def create_sql_nodes(
             # Source-table schema, not the result-set schema: the structural
             # rubric checks (columns/where/joins/subquery) need the tables the
             # SQL was written against.
-            table_schema = _get_table_schema_prompt(state.get("tables", []) or [])
+            table_schema = _get_table_schema_prompt(state.get("tables", []) or [], question)
             evaluator = SimpleSQLEvaluator(llm)
             result = evaluator.evaluate(question, sql_query, schema_info, data_sample, table_schema=table_schema)
         except Exception as e:  # never block the answer on evaluator failure

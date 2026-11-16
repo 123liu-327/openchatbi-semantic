@@ -5,7 +5,7 @@ This suite is **replay-only** by default. It runs a deterministic CI check using
 ## Run (replay)
 
 ```bash
-runledger run evals/runledger --mode replay --baseline baselines/runledger-openchatbi.json
+runledger run evals/runledger --mode replay --baseline baselines/runledger-baseline.json
 ```
 
 ## Record / update cassette (optional)
@@ -14,7 +14,7 @@ If you want to re-record the cassette with real tool outputs, run in record mode
 
 ```bash
 runledger run evals/runledger --mode record \
-  --baseline baselines/runledger-openchatbi.json \
+  --baseline baselines/runledger-baseline.json \
   --tool-module evals.runledger.tools
 ```
 
@@ -24,8 +24,8 @@ Notes:
 
 ```bash
 runledger baseline promote \
-  --from runledger_out/runledger-openchatbi/<run_id> \
-  --to baselines/runledger-openchatbi.json
+  --from runledger_out/runledger-baseline/<run_id> \
+  --to baselines/runledger-baseline.json
 ```
 
 ## Case / cassette / protocol format
@@ -64,7 +64,7 @@ These tests verify the scripted driver, trajectory uniqueness, corpus size, and 
 ### Full replay (CI only, requires eval extra)
 Install the eval extra: `pip install -e ".[eval]"`, then:
 ```bash
-runledger run evals/runledger --mode replay --baseline baselines/runledger-openchatbi.json
+runledger run evals/runledger --mode replay --baseline baselines/runledger-baseline.json
 ```
 This runs in CI for PRs to `main` (see `.github/workflows/`) or by manual dispatch.
 

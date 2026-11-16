@@ -19,7 +19,7 @@ jobs:
           python -m pip install .
       - name: Run deterministic evals (replay)
         run: |
-          runledger run evals/runledger --mode replay --baseline baselines/runledger-openchatbi.json
+          runledger run evals/runledger --mode replay --baseline baselines/runledger-baseline.json
       - name: Upload artifacts
         if: always()
         uses: actions/upload-artifact@v7

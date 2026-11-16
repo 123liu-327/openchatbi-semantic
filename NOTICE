@@ -1,0 +1,43 @@
+NOTICE
+======
+
+This repository is a fork of OpenChatBI.
+
+Upstream
+--------
+OpenChatBI v1.0.0b1 — https://github.com/zhongyu09/openchatbi
+Copyright (c) 2025 Yu Zhong
+Licensed under the MIT License (see LICENSE).
+
+The baseline commit in this repository,
+`baseline: upstream openchatbi v1.0.0b1 (unmodified)`,
+is an exact copy of the upstream tree. Everything after it is this fork's work;
+`git diff <baseline>..HEAD` is therefore the complete, reviewable delta.
+
+What this fork claims
+---------------------
+Only the commits authored after the baseline commit. In particular:
+
+* `openchatbi/semantic/` — the semantic layer (metric definitions with
+  dependency closure, the table-relationship graph, and column-level business
+  rules), which is the single source of truth consumed by both the chat
+  text2sql pipeline and the patrol job.
+* `openchatbi/patrol/` — a proactive patrol job whose plan is *derived from*
+  the semantic layer rather than hand-written SQL.
+* The tests, docs and demo dataset shipped alongside those two.
+
+What this fork does not claim
+-----------------------------
+The upstream product design, the LangGraph agent/text2sql orchestration, the
+catalog storage backends, the data analysis agent, the observability stack, and
+the evaluation harness — all of that belongs to the upstream author.
+
+Third-party inspiration
+-----------------------
+The engineering *patterns* in `openchatbi/patrol/` (four-gate alert dedup,
+time-bucket-free alert fingerprints, median/MAD baselines with an IQR fallback,
+per-metric run ledger, read-only agent tool constraints) were informed by the
+independent fork https://github.com/qihuai823/openchatbi-patrol (MIT). Its code
+was not copied; this fork's patrol is driven by the semantic layer instead of a
+hand-written YAML of SQL statements, which is what makes it a different
+increment rather than a downstream copy.

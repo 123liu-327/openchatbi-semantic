@@ -592,7 +592,7 @@
   ],
   "generated_at": "2026-06-20T14:27:42.249788Z",
   "regression": {
-    "baseline_path": "baselines/runledger-openchatbi.json",
+    "baseline_path": "baselines/runledger-baseline.json",
     "case_diffs": {
       "missing_in_current": [],
       "new_in_current": [
@@ -685,7 +685,7 @@
       "evals/runledger/agent/agent.py"
     ],
     "cases_total": 21,
-    "name": "runledger-openchatbi",
+    "name": "runledger-baseline",
     "suite_config_hash": null,
     "suite_path": "evals/runledger/suite.yaml",
     "tool_mode": "replay"

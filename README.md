@@ -1,12 +1,25 @@
+> ### 本仓库说明：这是对上游 OpenChatBI 的二次开发
+>
+> 本仓库基于 [zhongyu09/openchatbi](https://github.com/zhongyu09/openchatbi) 的 `v1.0.0b1`（**MIT License**）二次开发。
+> **OpenChatBI 的产品设计、LangGraph 编排层、text2sql 流水线与 catalog 存储归原作者所有**，本仓库不主张其著作权，
+> 范围划分见 [`NOTICE`](NOTICE)。
+>
+> 第一个提交 `baseline: upstream openchatbi v1.0.0b1 (unmodified)` 是上游源码的原样导入，其后所有提交是本仓库的增量；
+> `git diff <baseline>..HEAD` 即完整可评审的改动集。
+>
+> ### 本仓库的增量方向：语义层优先（Semantic Layer First）
+>
+> 上游的缺口是**业务语义没有单一真相源**：`derived_metric` 只是一段自由文本公式，表间外键读出来却从不使用，
+> 多表 JOIN 的键与顺序完全交给模型。本仓库把口径做成一份可执行的语义层（指标定义 + 依赖闭包 + 表关系图 +
+> 字段级口径规则），让**问答链路与巡检链路共用同一份定义**，而不是各写一套。
+
+---
+
 # OpenChatBI
 
 OpenChatBI is an open source, chat-based intelligent BI tool powered by large language models, designed to help users 
 query, analyze, and visualize data through natural language conversations. Built on LangGraph and LangChain ecosystem, 
 it provides chat agents and workflows that support natural language to SQL conversion and streamlined data analysis.
-
-Join the Slack channel to discuss: [Invitation Link To Join](https://join.slack.com/t/openchatbicommunity/shared_invite/zt-40o5ncq8k-fMU61eUg87m8JhrCIBOV8A)
-
-<img src="https://github.com/zhongyu09/openchatbi/raw/main/example/demo.gif" alt="Demo" width="800">
 
 ## Core Features
 
@@ -61,18 +74,15 @@ Join the Slack channel to discuss: [Invitation Link To Join](https://join.slack.
 OpenChatBI has upgraded its agent runtime to **LangGraph v1** and currently targets `langgraph>=1.2.2`.
 This upgrade also brings in the LangChain 1.x ecosystem and related compatibility changes.
 
-If you do **not** want to depend on LangGraph v1, please use OpenChatBI `v0.2.2` or an earlier release.
-
 ### Installation
 
-1. **Using uv (recommended):**
+1. **Using uv (recommended)** — run inside a local clone of this repository:
 
 ```bash
-git clone git@github.com:zhongyu09/openchatbi
 uv sync
 ```
 
-2. **Using pip:**
+2. **Using pip** (installs the upstream distribution from PyPI, not this fork):
 
 ```bash
 pip install openchatbi
@@ -81,7 +91,6 @@ pip install openchatbi
 3. **For development:**
 
 ```bash
-git clone git@github.com:zhongyu09/openchatbi
 uv sync --group dev
 ```
 
@@ -888,7 +897,7 @@ using recorded JSONL cassettes. It does not require live LLM or warehouse access
 in replay mode.
 
 ```bash
-uv run --extra eval runledger run evals/runledger --mode replay --baseline baselines/runledger-openchatbi.json
+uv run --extra eval runledger run evals/runledger --mode replay --baseline baselines/runledger-baseline.json
 ```
 
 Run artifacts are written under `runledger_out/`.
@@ -911,10 +920,6 @@ uv run pre-commit install
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details
-
-## Contact & Support
-
-- **Author**: Yu Zhong ([zhongyu8@gmail.com](mailto:zhongyu8@gmail.com))
-- **Repository**: [github.com/zhongyu09/openchatbi](https://github.com/zhongyu09/openchatbi)
-- **Issues**: [Report bugs and feature requests](https://github.com/zhongyu09/openchatbi/issues)
+MIT License — upstream OpenChatBI is Copyright (c) 2025 Yu Zhong, this fork's
+additions are Copyright (c) 2026 刘志立. See [LICENSE](LICENSE) for the full text
+and [NOTICE](NOTICE) for the exact scope of each part.

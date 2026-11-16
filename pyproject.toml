@@ -1,9 +1,9 @@
 [project]
 name = "openchatbi"
 version = "1.0.0b1"
-description = "OpenChatBI - Natural language business intelligence powered by LLMs for intuitive data analysis and SQL generation"
+description = "Semantic-layer-first business intelligence: one catalog of metric/join/rule definitions shared by the chat text2sql pipeline and the proactive patrol job"
 authors = [
-    { name = "Yu Zhong", email = "zhongyu8@gmail.com" },
+    { name = "刘志立", email = "3590105938@qq.com" },
 ]
 license = { text = "MIT" }
 readme = "README.md"
@@ -80,11 +80,15 @@ dependencies = [
     "mcp>=1.9.2,<2.0.0",
 ]
 
-[project.urls]
-Homepage = "https://github.com/zhongyu09/openchatbi"
-Repository = "https://github.com/zhongyu09/openchatbi"
-Documentation = "https://github.com/zhongyu09/openchatbi/tree/main"
-"Bug Tracker" = "https://github.com/zhongyu09/openchatbi/issues"
+# Distribution metadata is intentionally local-only for now. The Python package
+# is still named `openchatbi`; renaming it is a separate mechanical change (see
+# NOTICE and README "范围") because it touches every import plus uv.lock.
+#
+# [project.urls]
+# Homepage = ""
+# Repository = ""
+# Documentation = ""
+# "Bug Tracker" = ""
 
 [project.optional-dependencies]
 mysql = [

@@ -1,7 +1,9 @@
-OpenChatBI Documentation
-========================
+OpenChatBI (fork: semantic layer) Documentation
+===============================================
 
-`GitHub Repository <https://github.com/zhongyu09/openchatbi>`_
+This documentation covers a fork of `openchatbi <https://github.com/zhongyu09/openchatbi>`_
+(MIT). The upstream feature documentation below is kept verbatim; this fork's
+own increment is described in ``NOTICE`` and in the README header.
 
 .. include:: ../../README.md
    :parser: myst_parser.sphinx_

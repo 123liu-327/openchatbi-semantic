@@ -1,6 +1,10 @@
 MIT License
 
-Copyright (c) 2025 Yu Zhong
+Copyright (c) 2025 Yu Zhong (upstream: OpenChatBI)
+Copyright (c) 2026 刘志立 (this fork's additions)
+
+The upstream copyright notice is retained as required by the MIT License; see
+NOTICE for the exact scope of what this fork adds on top of upstream.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

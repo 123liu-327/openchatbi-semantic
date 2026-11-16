@@ -10,10 +10,10 @@ import sys
 
 sys.path.insert(0, os.path.abspath("../.."))
 
-project = "OpenChatBI"
-copyright = "2025, Yu Zhong"
-author = "Yu Zhong"
-release = "1.0.0b1"
+project = "OpenChatBI (fork: semantic layer)"
+copyright = "2025 Yu Zhong (upstream); 2026 刘志立 (this fork)"
+author = "刘志立"
+release = "1.0.0b1+semantic"
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
@@ -74,8 +74,8 @@ napoleon_attr_annotations = True
 html_theme = "sphinx_rtd_theme"
 html_static_path = ["_static"]
 
-# GitHub Pages configuration
-html_baseurl = "https://zhongyu09.github.io/openchatbi/"
+# Local documentation build only: this fork does not publish a site, so no
+# html_baseurl is set (upstream pointed it at the author's GitHub Pages project).
 
 # Theme options for RTD theme
 html_theme_options = {

@@ -179,7 +179,7 @@ T6 完整验证：全量 841 passed / 1 skipped；mypy 11 源文件通过；Blac
 
 完整实现 metric/search_metrics/closure/plan_join/rules_for/render；所有读取方法仅操作装配后的快照。无 embedding 时使用别名/展示名/机器键精确词匹配，最长匹配优先，避免“毛利率”被较短的“毛利”抢占。未为 BM25 引入上游 utils 的 LLM/config 导入栈。JSON 原版中文指标需显式 mapping_path 数据映射，不猜英文机器键；优先使用已清洗 YAML。
 
-disabled=False 的常规构造之外，enabled=False 使用空模型快照避免首次 Pydantic 插件构建产生文件读取；没有语义文件、catalog 或客户端 I/O。YAML 来源拒绝记录拼写错误。loader 不 import 源 MVP 项目。
+enabled=False 使用空模型快照避免首次 Pydantic 插件构建产生文件读取；没有语义文件、catalog 或客户端 I/O。YAML 来源拒绝记录拼写错误。loader 不 import 源 MVP 项目。
 
 后续接入范围说明：原方案一处写“第4个上游文件停止”，另一处允许6个并明确列出 T7–T9 的接入文件。本轮用户已明确选择完成 T6–T9；按其具体交付范围实施，预计仅 config_loader.py、config.yaml.template、generate_sql.py、sql_graph.py、schema_linking.py 共5个上游文件，仍在C2的6文件上限内。其余新增能力位于 semantic/，不改变 SemanticProvider 的签名。
 
@@ -202,3 +202,13 @@ T8 验证：首次/重试和空 provider 共4例；golden+生成节点专项119 
 迁移清洗数据补齐成本/利润上下文对 gross_amount 的硬排除，并增加明确的英文别名/触发词，覆盖上游将问题改写成英文的实际路径；数学定义和13条指标数量不变。词汇全部放在 migration.yaml，不在 semantic Python 中写行业词。
 
 专项：20条中文问题字段违规数0，其中18条得到可达 schema，2条独立来源利润问题被明确阻断单查询；另4条英文改写保留同样约束。真实选表→首次生成→SQL执行节点使用固定LLM输出跑通，收入66,814,000；可选误选表移除、必需源不可达、None/空Provider、图透传均验证。上游增量最终5文件，旧golden文件未修改。
+
+## 本轮收口：启动、工程验收与剩余业务差异
+
+新增 scripts/run_semantic_demo.py，默认不读取应用配置、不建立 LLM，复制独立 demo catalog 并生成来自规范指标的检索示例；已有演示数据库不自动重置。离线无 key、仓库外启动通过，收入66,814,000，毛利率90.92705121681085。--prepare-chat 按 CHATBI_MODEL 和可选 OPENAI_BASE_URL 生成独立配置，不写密钥。测试模型在禁止 socket 连接的新进程中可冷启动真实 agent_graph 模块并装配语义层。
+
+最终工程结果：全量893 passed / 1 skipped（24.72s）；golden+semantic217 passed（19.59s）；mypy15源文件通过；Black187文件通过；新增代码与接入文件Ruff通过，全库仍2个基线问题；数据结构/引用/模板执行校验0 errors / 0 warnings。启动专项2 passed（6.77s）。运行环境均为Conda agent_study。
+
+最终业务一致性复核发现：6条原指标模板对 exchange_rates 为INNER，原关系声明为LEFT。完整种子数据会掩盖差异；在私有内存库删除2026-05-15/USD汇率，客单价INNER为7,761,066.666666667、LEFT为5,820,800。已异步请求用户确定最终准则，未擅自改写业务策略。因此 docs/semantic-acceptance.md 明确标记最终业务验收待确认，不能写成所有口径完全一致。
+
+用户已确认本轮只完成语义层，巡检另开阶段。真实LLM效果、巡检指标和多步自动执行均未冒充已验证。使用说明见 docs/semantic-quickstart.md；该文件也指出当前JOIN策略待确认状态。

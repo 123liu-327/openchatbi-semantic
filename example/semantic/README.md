@@ -1,6 +1,8 @@
 # 独立 MVP 演示 catalog 与语义数据
 
-本目录与原 `example/` 物流 catalog 分开，不修改默认配置。当前交付为 T2 的离线迁移数据，尚未接入问答链路。
+本目录与原 `example/` 物流 catalog 分开，不修改默认启用行为。T1–T9 已完成，语义层可通过配置接入问答链路，默认关闭。巡检为下一阶段。
+
+参见 [最终验收说明](../../docs/semantic-acceptance.md) 和 [简约启动说明](../../docs/semantic-quickstart.md)。
 
 - `metrics.yaml`：13 条指标，别名包含原展示名，依赖使用机器键；优先保留源项目完整 SELECT，避免把带 WHERE/GROUP BY 的原公式当作可内联表达式。
 - `rules.yaml`：8 条原规则，字段名保留表限定，强制包含字段的所属表转为 `require_tables`，便于 T6 反补。
@@ -25,11 +27,11 @@ catalog 通过静态解析源 `database/init.sql` 的 CREATE TABLE 和 INSERT VA
 
 迁移全程不 import 或执行源 Python 模块，仅用 JSON 直读和 AST `literal_eval` 读取常量。多步指标通过 `migration.yaml` 显式标记，源自然语言步骤保存在报告中，不按字符串前缀推断。
 
-已知业务冲突：源“收入”和“含税”规则可同时触发，导致相同列一边必须使用、一边禁止使用。迁移保持原规则并记录，不把结构校验通过当成冲突已解决；T6 必须显式处理规则冲突。多步指标有两个时间字段，当前契约只提供一个 `time_field`，因此置空并在报告中保留原文；T4/T7 应通过依赖拿到各来源时间字段。
+规则中的含税例外已用 exclude_any 数据字段表达，英文改写用的别名和触发词也保存在 migration.yaml。现有收入指标仍是净额口径，含税收入需要独立指标定义；当前若遇到规范指标与含税规则冲突，会明确拒绝。多步指标有两个时间字段，当前契约只提供一个 time_field，因此置空并在报告中保留原文；尚未实现自动对齐时间范围的多步执行器。
 
 来源均使用 `chatbi_mvp:<file>#<key>` 标注；本目录仅迁移本地源项目的演示知识和种子数据，不包含其运行时代码。
 
-T5 新增的关系规划能力可独立使用，配置装配仍留待 T7：
+关系规划能力可独立使用，也可通过 SemanticLayer.from_config 装配：
 
 ```python
 from openchatbi.semantic.join import JoinGraph, merge_edges, to_sql_clause

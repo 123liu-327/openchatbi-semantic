@@ -24,7 +24,9 @@ $env:CONFIG_FILE = (Resolve-Path data/semantic_demo/chat-config.yaml).Path
 python run_cli.py "What is the revenue?"
 ```
 
-交互问答：`python run_cli.py`。可选网页入口：`python -m streamlit run run_streamlit_ui.py`。二者均使用同一个 CONFIG_FILE。配置生成器不写入 API key，不覆盖 `openchatbi/config.yaml`；生成的路径均为绝对路径，embedding 不配置时走上游 BM25 降级。
+交互问答：`python run_cli.py`。网页工作台：`python run_streamlit_ui.py`，打开 `http://localhost:8501`。也可直接执行 `python -m streamlit run sample_ui/streamlit_ui.py --server.port=8501 --server.address=localhost`。不要把启动器 run_streamlit_ui.py 再传给 streamlit run。
+
+Streamlit 页面直接调用同进程中的 Python/LangGraph 后端，无需额外启动 FastAPI。sample_api/async_api.py 是给其他客户端使用的独立 API 示例，不是该工作台的必需依赖。CLI 和工作台均使用同一个 CONFIG_FILE。配置生成器不写入 API key，不覆盖 openchatbi/config.yaml；生成的路径均为绝对路径，embedding 不配置时走上游 BM25 降级。
 
 真实服务是否支持所需的工具调用和结构化输出，仍取决于你配置的模型；本轮没有调用真实模型服务。已验证无密钥离线演示、禁网条件下使用测试模型冷启动真实应用模块，以及固定模型输出的选表→生成→SQLite执行链路。
 

@@ -26,6 +26,7 @@ from openchatbi.utils import log  # noqa: E402
 from sample_ui.async_graph_manager import AsyncGraphManager  # noqa: E402
 from sample_ui.history_loader import load_session_history  # noqa: E402
 from sample_ui.plotly_utils import visualization_dsl_to_gradio_plot  # noqa: E402
+from sample_ui.response import resolve_visible_response  # noqa: E402
 
 # Configuration
 st.set_page_config(page_title="OpenChatBI - Streamlit Interface", page_icon="💬", layout="wide")
@@ -180,58 +181,33 @@ async def process_user_message_stream(
         st.session_state.session_interrupts[user_session_id] = True
     else:
         st.session_state.session_interrupts[user_session_id] = False
+        visible = resolve_visible_response(final_response, state.values)
+        final_response = visible.text
 
     # Final update - add completion message to chronological content
     # Add some spacing if the last content didn't end with newlines
     if not chronological_content.endswith("\n\n"):
         chronological_content += "\n\n"
-    chronological_content += "✅ **Analysis complete!**"
+    if state.interrupts:
+        chronological_content += "⏸️ **等待补充信息**"
+    elif visible.is_error:
+        chronological_content += "⚠️ **请求失败，请查看下方说明。**"
+    else:
+        chronological_content += "✅ **Analysis complete!**"
     update_display()
 
-    # Extract final answer (last part without tool calls) and display outside thinking
+    # Final state is authoritative when providers omit token events (including
+    # model-call errors). Display and persist exactly the same visible answer.
+    final_answer_text = final_response.strip()
     if final_response:
-        # Find the last occurrence of tool usage to separate final answer
-        lines = final_response.split("\n")
-        final_answer_lines = []
-        collecting_final = False
-
-        for line in reversed(lines):
-            if "Use tool:" in line or "Using tools:" in line or "Using tool:" in line:
-                break
-            final_answer_lines.append(line)
-            collecting_final = True
-
-        if collecting_final and final_answer_lines:
-            # Reverse back to correct order
-            final_answer_lines.reverse()
-            final_answer_text = "\n".join(final_answer_lines).strip()
-
-            if final_answer_text:
-                with response_container:
-                    processed_final_answer_text = process_download_links(final_answer_text)
-                    render_content_with_downloads(processed_final_answer_text)
+        with response_container:
+            processed_final_answer_text = process_download_links(final_answer_text)
+            render_content_with_downloads(processed_final_answer_text)
 
     # Final update to response container - only show plot if available (text response is in thinking container)
     with response_container:
         if plot_figure:
             st.plotly_chart(plot_figure, width="stretch", key=str(uuid.uuid4()))
-
-    # Extract final answer for separate storage
-    final_answer_text = ""
-    if final_response:
-        lines = final_response.split("\n")
-        final_answer_lines = []
-        collecting_final = False
-
-        for line in reversed(lines):
-            if "Use tool:" in line or "Using tools:" in line or "Using tool:" in line:
-                break
-            final_answer_lines.append(line)
-            collecting_final = True
-
-        if collecting_final and final_answer_lines:
-            final_answer_lines.reverse()
-            final_answer_text = "\n".join(final_answer_lines).strip()
 
     return final_response, plot_figure, thinking_steps, chronological_content, final_answer_text
 

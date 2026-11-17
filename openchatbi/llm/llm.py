@@ -2,6 +2,7 @@ import time
 import traceback
 
 from langchain_core.language_models import BaseChatModel
+from langchain_core.messages import AIMessage
 from langchain_core.runnables.base import RunnableBinding
 from langchain_core.tools import StructuredTool
 
@@ -167,7 +168,14 @@ def call_llm_chat_model_with_retry(
                 )
             except Exception as exc:  # pragma: no cover - never break the call path
                 log(f"LLM usage capture failed: {exc!r}")
-        except Exception:
+        except Exception as exc:
+            status = getattr(exc, "status_code", None)
+            if status in (401, 403):
+                log(f"LLM authentication/authorization failed (HTTP {status}).")
+                return AIMessage(
+                    content=f"模型服务拒绝访问（HTTP {status}）。请检查项目根目录 .env 中的 OPENAI_API_KEY 和 OPENAI_BASE_URL 是否属于同一服务，保存后重启工作台。",
+                    response_metadata={"llm_error": True, "http_status": status},
+                )
             run_time = int(time.time() - start_time)
             retry += 1
             log(f"LLM response error after {run_time} seconds, retry {retry} times.")

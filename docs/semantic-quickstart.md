@@ -1,5 +1,7 @@
 # 简约启动说明
 
+最短网页启动：在项目根目录 `.env` 填写 OPENAI_API_KEY、CHATBI_MODEL 和可选的 OPENAI_BASE_URL（格式见 `.env.example`），激活 Conda agent_study 后运行 `python run_workbench.py`，打开 `http://localhost:8501`。入口自动读取根目录 .env、准备独立演示配置并启动页面；已有终端环境变量优先于 .env。密钥仅保存在本地忽略文件和进程环境中，不写进生成配置。
+
 当前工程启动与回归已通过，汇率表 INNER/LEFT 的源口径差异仍待确认，详见验收说明。以下离线步骤可用于检查现状；在线问答尚未完成最终业务口径验收。
 
 Windows PowerShell，使用已配置的 Conda `agent_study`：

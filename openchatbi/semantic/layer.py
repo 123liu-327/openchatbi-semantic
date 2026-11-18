@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 import re
 from collections.abc import Mapping, Sequence
 
@@ -45,6 +47,21 @@ class SemanticLayer:
     def metric(self, name: str) -> MetricSpec | None:
         return self._bundle.metrics.get(name)
 
+    def list_metrics(self) -> tuple[MetricSpec, ...]:
+        """Enumerate canonical records without retrieval or I/O."""
+        return tuple(self._bundle.metrics.values())
+
+    def list_rules(self) -> tuple[BusinessRule, ...]:
+        """Enumerate rules without manufacturing a matching question."""
+        return self._bundle.rules
+
+    @property
+    def snapshot_id(self) -> str:
+        """Identity includes metric expressions, rule constraints and directed joins."""
+        payload = self._bundle.model_dump(mode="json")
+        payload["tables"] = sorted(payload["tables"])
+        return hashlib.sha256(json.dumps(payload, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
+
     @property
     def is_empty(self) -> bool:
         return not (self._bundle.metrics or self._bundle.rules or self._bundle.edges)
@@ -80,6 +97,10 @@ class SemanticLayer:
 
     def plan_join(self, anchor: str, targets: Sequence[str]) -> JoinPlan:
         return self._graph.plan_join(anchor, targets)
+
+    def relationships(self):
+        """Declared relationship facts, without selecting an anchor or execution order."""
+        return self._bundle.edges
 
     def rules_for(self, question: str, tables: Sequence[str] = ()) -> tuple[BusinessRule, ...]:
         return match_rules(self._bundle.rules, question, tables)

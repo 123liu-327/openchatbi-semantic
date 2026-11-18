@@ -228,3 +228,4 @@ start_openchatbi.bat
 start_openchatbi.ps1
 patrol_state.sqlite
 *.sqlite-journal
+checkpoints-four-domain.db*

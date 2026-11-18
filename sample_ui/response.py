@@ -25,7 +25,10 @@ def resolve_visible_response(streamed: str, values: Mapping[str, Any]) -> Visibl
                 return VisibleResponse(
                     "模型服务调用失败，未生成回答。请检查 .env 中的密钥和接口地址，修改后重启工作台。", True
                 )
-            return VisibleResponse(text, bool(message.response_metadata.get("llm_error")))
+            return VisibleResponse(
+                text,
+                bool(message.response_metadata.get("llm_error") or message.response_metadata.get("workflow_error")),
+            )
     # A final_answer field may be left over from the preceding turn. Never use
     # it when the current message history ends with a user/tool message.
     if not messages and values.get("final_answer"):

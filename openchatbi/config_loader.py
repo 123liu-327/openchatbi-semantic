@@ -13,6 +13,7 @@ from openchatbi.constants import EXTRACTION_MAX_TOOL_ROUNDS, SQL_RESULT_LIMIT
 from openchatbi.semantic.config import SemanticConfig
 from openchatbi.semantic.config import SemanticSourceConfig as SemanticSourceConfig
 from openchatbi.utils import log
+from openchatbi.workflow.config import WorkflowConfig
 
 
 class LLMProviderConfig(BaseModel):
@@ -88,6 +89,7 @@ class Config(BaseModel):
     # Catalog Store
     catalog_store: Any = None
     semantic: SemanticConfig = SemanticConfig()
+    workflow: WorkflowConfig = WorkflowConfig()
 
     # Path to the vector database file
     vector_db_path: str | None = None
@@ -215,13 +217,14 @@ class ConfigLoader:
         import yaml
 
         try:
-            with open(config_file, encoding="utf-8") as file:
-                config_data = yaml.safe_load(file)
-                if config_data is None:
-                    config_data = {}
+            from openchatbi.config_files import read_config_file
+
+            config_data = read_config_file(config_file)
         except FileNotFoundError:
             log(f"Configuration file not found: {config_file}, leave config un-loaded.")
             return
+        except ValueError:
+            raise
         except yaml.YAMLError as e:
             raise ValueError(f"Invalid YAML in configuration file {config_file}: {e}") from e
         except Exception as e:
@@ -274,7 +277,7 @@ class ConfigLoader:
             raise ValueError("Missing LLM config key: default_llm")
 
         if not config_data.get("embedding_model"):
-            log("WARN: Missing LLM config key: embedding_model, will use BM25 based retrival only")
+            log("SQL example retrieval uses BM25 because embedding_model is unset; four-domain semantic retrieval uses independent QWEN_EMBEDDING_* settings")
         if "data_warehouse_config" not in config_data:
             raise ValueError("Missing Data Warehouse config key: data_warehouse_config")
 
@@ -380,6 +383,8 @@ class ConfigLoader:
                 bi_config_data = yaml.safe_load(file) or {}
         except FileNotFoundError:
             log(f"Warning: BI config file '{bi_config_file}' not found. Ignore load BI config from yaml file.")
+        except ValueError:
+            raise
         except yaml.YAMLError as e:
             log(f"Warning: Invalid YAML in BI config file '{bi_config_file}': {e}. Using empty config.")
         except Exception as e:

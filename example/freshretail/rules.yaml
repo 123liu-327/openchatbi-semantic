@@ -1,0 +1,37 @@
+version: 1
+rules:
+- name: normalized_sales_scope
+  trigger_any:
+  - 销量
+  - 销售量
+  - 销售额
+  - 收入
+  - sale_amount
+  scope_tables:
+  - daily_sales
+  require_tables:
+  - daily_sales
+  require_columns:
+  - daily_sales.sale_amount
+  - daily_sales.dt
+  note: sale_amount为归一化销量；缺少价格和成本数据，销售金额、收入及利润无法计算。train/eval可合并，按用户日期过滤。
+  provenance: FreshRetailNet-50K:README#sale_amount
+- name: daily_array_fields
+  trigger_any:
+  - 销量
+  - 缺货
+  - 折扣
+  - 门店
+  - 商品
+  - 城市
+  exclude_any:
+  - 小时
+  - 逐时
+  - hour
+  scope_tables:
+  - daily_sales
+  forbid_columns:
+  - daily_sales.hours_sale
+  - daily_sales.hours_stock_status
+  note: 日粒度查询排除小时JSON数组以减少无关字段；小时查询需显式解释JSON数组。
+  provenance: FreshRetailNet-50K:README#hours_sale

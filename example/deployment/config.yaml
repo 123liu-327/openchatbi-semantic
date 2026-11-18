@@ -1,0 +1,25 @@
+# One entry point. Later includes override earlier ones; this file overrides all.
+includes:
+  - database.yaml
+  - business.yaml
+  - retrieval.yaml
+organization: Semantic workbench
+default_llm:
+  class: langchain_openai.ChatOpenAI
+  params:
+    model: ${CHATBI_MODEL}
+    temperature: 0
+python_executor: local
+visualization_mode: rule
+enable_fail_closed_sql_guard: true
+report_directory: ../../data/semantic_demo/reports
+workflow:
+  mode: four_domain
+  authorization:
+    principal: local_workbench
+    table_columns:
+      sales_orders: ['*']
+      dim_products: ['*']
+      dim_customers: ['*']
+      finance_expenses: ['*']
+      exchange_rates: ['*']

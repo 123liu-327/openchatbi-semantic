@@ -45,7 +45,18 @@ SQL_SUBGRAPH_NODES = {
 # with a reset checkpoint namespace (see analysis/agent._build_sub_agent_config),
 # the deepagents `model`/`tools`/middleware nodes are flattened onto depth 0
 # instead of appearing as a nested subgraph.
-MAIN_GRAPH_NODES = {"llm_node", "use_tool", "ask_human"}
+MAIN_GRAPH_NODES = {
+    "llm_node",
+    "use_tool",
+    "ask_human",
+    "plan",
+    "schedule",
+    "semantic",
+    "text2sql",
+    "delivery",
+    "review",
+    "finalize",
+}
 
 # Display label used for the (flattened) data analysis sub-agent layer.
 SUBAGENT_LABEL = "data_analysis"
@@ -192,6 +203,7 @@ class AgentStreamProcessor:
 
     def __init__(self) -> None:
         self._data_csv: Any = None
+        self._data_by_namespace: dict[tuple, Any] = {}
         self.final_response: str = ""
         self.turn_usage: StreamUsage = StreamUsage(turn_tokens=0, turn_cost_usd=0.0, by_model={})
 
@@ -202,7 +214,7 @@ class AgentStreamProcessor:
 
         if event_type == "messages":
             return list(self._process_message(namespace, depth, layer_label, event_value))
-        return list(self._process_updates(depth, layer_label, event_value))
+        return list(self._process_updates(depth, layer_label, event_value, namespace))
 
     def emit_turn_usage(self) -> StreamUsage | None:
         """Return the accumulated per-turn usage, or None if nothing was recorded."""
@@ -258,10 +270,33 @@ class AgentStreamProcessor:
             label = layer_label if depth > 0 else SUBAGENT_LABEL
             yield StreamToken(text=token, level=level, label=label, is_final=False)
 
-    def _process_updates(self, depth: int, layer_label: str, event_value: Any) -> Iterator[StreamEvent]:
+    def _process_updates(
+        self, depth: int, layer_label: str, event_value: Any, namespace: tuple = ()
+    ) -> Iterator[StreamEvent]:
         for node_name, node_output in event_value.items():
             if not isinstance(node_output, dict):
                 continue
+
+            for workflow_event in node_output.get("workflow_events", []):
+                event_kind = workflow_event.get("kind", "task")
+                if event_kind in ("plan", "replan"):
+                    detail = workflow_event.get("plan", {})
+                    description = (
+                        f"查询计划 v{workflow_event.get('version', 1)}：{len(detail.get('tasks', []))} 个子任务"
+                    )
+                else:
+                    result = workflow_event.get("result", {})
+                    description = (
+                        f"{workflow_event.get('task_id', '')} · {workflow_event.get('operation', '')}"
+                        f" · {result.get('status', '开始执行')}"
+                    )
+                yield StreamStep(
+                    text=description,
+                    level=depth,
+                    label=workflow_event.get("domain", "orchestrator"),
+                    kind="workflow",
+                    data=workflow_event,
+                )
 
             is_main_node = depth == 0 and node_name in MAIN_GRAPH_NODES
             if is_main_node:
@@ -327,6 +362,7 @@ class AgentStreamProcessor:
                 desc = "⚡ Executing SQL query..."
                 kind = "execute_sql"
                 self._data_csv = node_output.get("data")
+                self._data_by_namespace[namespace] = self._data_csv
                 data = {"data": self._data_csv}
 
             elif node_name == "regenerate_sql":
@@ -341,7 +377,10 @@ class AgentStreamProcessor:
                 if visualization_dsl and "error" not in visualization_dsl:
                     desc = "📊 Generated visualization"
                     kind = "visualization"
-                    data = {"visualization_dsl": visualization_dsl, "data": self._data_csv}
+                    data = {
+                        "visualization_dsl": visualization_dsl,
+                        "data": self._data_by_namespace.get(namespace, self._data_csv if not namespace else None),
+                    }
 
             elif node_name == "score_sql":
                 score = node_output.get("sql_confidence")

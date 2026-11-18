@@ -7,6 +7,8 @@ from unittest.mock import Mock
 import pytest
 
 from openchatbi.agent_graph import build_agent_graph_async, build_agent_graph_sync, get_sql_tools
+from tests.workflow.test_workflow import runtime  # noqa: F401
+from openchatbi.workflow.graph import build_workflow_graph
 
 
 class DummyLLM:
@@ -44,30 +46,27 @@ class FakeSQLGraph:
         return self._response()
 
 
-def _patch_agent_graph_dependencies(monkeypatch: pytest.MonkeyPatch) -> None:
+def _patch_agent_graph_dependencies(monkeypatch, runtime):
     import openchatbi.agent_graph as agent_graph
-    import openchatbi.analysis.agent as analysis_agent
+    import openchatbi.workflow.factory as factory
 
-    monkeypatch.setattr(agent_graph, "get_llm", lambda provider=None: DummyLLM())
-    monkeypatch.setattr(analysis_agent, "get_analysis_llm", lambda provider=None: DummyLLM())
-    monkeypatch.setattr(analysis_agent, "create_deep_agent", lambda *args, **kwargs: FakeSQLGraph())
-    monkeypatch.setattr(agent_graph, "build_sql_graph", lambda *args, **kwargs: FakeSQLGraph())
-    monkeypatch.setattr(agent_graph, "get_memory_tools", lambda *args, **kwargs: None)
+    monkeypatch.setattr(agent_graph.config, "get", lambda: runtime.cfg)
+    monkeypatch.setattr(agent_graph, "_get_mcp_servers", lambda: [])
+    monkeypatch.setattr(factory, "build_configured_workflow", lambda *args, **kwargs: build_workflow_graph(runtime))
     monkeypatch.setattr(agent_graph, "create_mcp_tools_sync", lambda servers: [])
     monkeypatch.setattr(agent_graph, "get_mcp_tools_async", lambda servers: _async_empty_tools())
-    monkeypatch.setattr(analysis_agent, "check_forecast_service_health", lambda: False)
 
 
 async def _async_empty_tools() -> list:
     return []
 
 
-def test_sync_agent_graph_builds_with_langgraph_v1(monkeypatch: pytest.MonkeyPatch) -> None:
-    _patch_agent_graph_dependencies(monkeypatch)
+def test_sync_agent_graph_builds_with_langgraph_v1(monkeypatch: pytest.MonkeyPatch, runtime) -> None:
+    _patch_agent_graph_dependencies(monkeypatch, runtime)
 
     graph = build_agent_graph_sync(Mock(), checkpointer=None, memory_store=None, enable_context_management=False)
 
-    assert graph.name == "agent_graph"
+    assert {"semantic", "text2sql", "delivery"} <= graph.get_graph().nodes.keys()
     assert hasattr(graph, "invoke")
     assert hasattr(graph, "stream")
 
@@ -89,12 +88,12 @@ def test_default_graph_entrypoint_uses_sync_builder(monkeypatch: pytest.MonkeyPa
 
 
 @pytest.mark.asyncio
-async def test_async_agent_graph_builds_with_langgraph_v1(monkeypatch: pytest.MonkeyPatch) -> None:
-    _patch_agent_graph_dependencies(monkeypatch)
+async def test_async_agent_graph_builds_with_langgraph_v1(monkeypatch: pytest.MonkeyPatch, runtime) -> None:
+    _patch_agent_graph_dependencies(monkeypatch, runtime)
 
     graph = await build_agent_graph_async(Mock(), checkpointer=None, memory_store=None, enable_context_management=False)
 
-    assert graph.name == "agent_graph"
+    assert {"semantic", "text2sql", "delivery"} <= graph.get_graph().nodes.keys()
     assert hasattr(graph, "ainvoke")
     assert hasattr(graph, "astream")
 

@@ -1,0 +1,22 @@
+catalog_store:
+  store_type: file_system
+  data_path: ../../data/freshretail/catalog
+  auto_load: false
+semantic:
+  enabled: true
+  strict: true
+  join_source: declared
+  sources:
+  - type: yaml
+    path: metrics.yaml
+    priority: 20
+  - type: yaml
+    path: rules.yaml
+    priority: 20
+  - type: yaml
+    path: joins.yaml
+    priority: 20
+bi_config:
+  basic_knowledge_glossary: FreshRetailNet数据覆盖2024-03-28至2024-07-02。sale_amount是归一化销售数量，不能解释为货币金额或实际件数。门店与商品仅有匿名编号。包含日/小时销量、缺货小时、折扣、天气。缺少商品销售价格、成本、费用和利润数据。2024年Q1和Q3仅有部分日期，不是完整季度。
+  data_warehouse_introduction: daily_sales为门店商品日事实；stores为匿名门店城市维表；products为匿名商品分类维表。train/eval为原始时间分片，业务统计可合并。
+  extra_tool_use_rule: 用户要求销售金额、利润、成本归因或基于利润的资金分配时，先用semantic.clarify说明数据缺口，询问是否改做归一化销量、缺货和折扣分析。不得用销量代替利润，不得假设缺失的价格或成本。季度分析必须指出Q1/Q3观测不完整。业务缺口可向用户正常说明，无需生成不可执行的利润查询。

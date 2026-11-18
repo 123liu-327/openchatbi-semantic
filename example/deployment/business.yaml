@@ -1,0 +1,14 @@
+# This package describes the existing chatbi_mvp demo schema.
+# For another business, replace the catalog and all three semantic sources together.
+catalog_store:
+  store_type: file_system
+  data_path: ../../data/semantic_demo/catalog
+  auto_load: false
+semantic:
+  enabled: true
+  strict: true
+  join_source: declared
+  sources:
+    - {type: yaml, path: ../semantic/metrics.yaml, priority: 20}
+    - {type: yaml, path: ../semantic/rules.yaml, priority: 20}
+    - {type: yaml, path: ../semantic/joins.yaml, priority: 20}

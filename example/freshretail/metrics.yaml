@@ -1,0 +1,55 @@
+version: 1
+metrics:
+- name: normalized_sales
+  label: 归一化销量
+  aliases:
+  - 销量
+  - 销售量
+  - 归一化销量
+  level: atomic
+  definition: 日销量按官方统一系数缩放，不能还原实际件数或解释为货币金额。
+  sql_template: SELECT SUM(sale_amount) AS normalized_sales FROM daily_sales
+  source_tables:
+  - daily_sales
+  time_field: daily_sales.dt
+  depends_on: []
+  provenance: FreshRetailNet-50K:README#Data-Fields
+- name: stockout_hours
+  label: 缺货小时数
+  aliases:
+  - 缺货
+  - 缺货小时数
+  level: atomic
+  definition: 对门店商品日的6至22点缺货小时数求和，注意商品数和天数会影响总数。
+  sql_template: SELECT SUM(stock_hour6_22_cnt) AS stockout_hours FROM daily_sales
+  source_tables:
+  - daily_sales
+  time_field: daily_sales.dt
+  depends_on: []
+  provenance: FreshRetailNet-50K:README#Data-Fields
+- name: average_discount
+  label: 平均折扣系数
+  aliases:
+  - 折扣
+  - 平均折扣系数
+  level: atomic
+  definition: 门店商品日折扣系数的算术平均，1表示原价，0.9表示九折；不是销量加权折扣。
+  sql_template: SELECT AVG(discount) AS average_discount FROM daily_sales
+  source_tables:
+  - daily_sales
+  time_field: daily_sales.dt
+  depends_on: []
+  provenance: FreshRetailNet-50K:README#Data-Fields
+- name: active_stores
+  label: 门店数
+  aliases:
+  - 门店数
+  - 活跃门店数
+  level: atomic
+  definition: 所选日期和过滤范围内有记录的门店去重数，不等同于当天有销量的门店数。
+  sql_template: SELECT COUNT(DISTINCT store_id) AS active_stores FROM daily_sales
+  source_tables:
+  - daily_sales
+  time_field: daily_sales.dt
+  depends_on: []
+  provenance: FreshRetailNet-50K:README#Data-Fields

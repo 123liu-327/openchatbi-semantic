@@ -1,0 +1,24 @@
+includes:
+- database.yaml
+- business.yaml
+- retrieval.yaml
+organization: FreshRetail 生鲜经营分析
+report_directory: ../../data/freshretail/reports
+workflow:
+  authorization:
+    principal: local_workbench
+    table_columns:
+      daily_sales:
+      - '*'
+      stores:
+      - '*'
+      products:
+      - '*'
+default_llm:
+  class: langchain_openai.ChatOpenAI
+  params:
+    model: ${CHATBI_MODEL}
+    temperature: 0
+python_executor: local
+visualization_mode: rule
+enable_fail_closed_sql_guard: true

@@ -1,0 +1,4 @@
+dialect: sqlite
+data_warehouse_config:
+  uri: ${CHATBI_DATABASE_URI}
+  database_name: ''

@@ -93,6 +93,14 @@ def prepare(output: Path, *, model: str | None = None) -> tuple[SemanticLayer, P
                 "data_warehouse_config": {"uri": "sqlite:///" + database.as_posix(), "database_name": ""},
                 "default_llm": {"class": "langchain_openai.ChatOpenAI", "params": params},
                 "semantic": semantic,
+                "workflow": {
+                    "mode": os.getenv("CHATBI_WORKFLOW_MODE", "four_domain"),
+                    "authorization": {
+                        "principal": "local_workbench",
+                        "table_columns": {table: ["*"] for table in DemoCatalog(catalog).get_table_list()},
+                    },
+                    "retrieval_metadata_path": str(ROOT / "example/workflow/retrieval_metadata.json"),
+                },
             },
         )
     return layer, database, config_path

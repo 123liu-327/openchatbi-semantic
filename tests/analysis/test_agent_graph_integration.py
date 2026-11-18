@@ -1,88 +1,38 @@
-from unittest.mock import MagicMock, Mock, patch
+"""Both application entry points use the sole four-domain workflow."""
 
+from unittest.mock import patch
 import pytest
-from langchain_core.tools import StructuredTool
-from langgraph.graph.state import CompiledStateGraph
-
+from langchain_core.messages import HumanMessage
 from openchatbi.agent_graph import build_agent_graph_async, build_agent_graph_sync
-from openchatbi.catalog import CatalogStore
+from openchatbi.workflow.graph import build_workflow_graph
+from tests.workflow.test_workflow import runtime  # noqa: F401
 
 
-def _make_tool(name: str) -> StructuredTool:
-    def mock_func(input_str: str) -> str:
-        return f"Mock {name} result"
-
-    return StructuredTool.from_function(func=mock_func, name=name, description=f"Mock {name} tool")
-
-
-@pytest.fixture
-def mock_catalog():
-    return MagicMock(spec=CatalogStore)
-
-
-@pytest.fixture
-def mock_llm():
-    llm = Mock()
-    llm.bind_tools = Mock(return_value=llm)
-    return llm
-
-
-@patch("openchatbi.agent_graph.get_memory_tools", return_value=[])
-@patch("openchatbi.analysis.agent.get_data_analysis_tool")
-@patch("openchatbi.agent_graph.get_sql_tools")
-@patch("openchatbi.agent_graph.build_sql_graph")
-@patch("openchatbi.agent_graph.create_mcp_tools_sync")
-def test_build_agent_graph_sync_includes_data_analysis(
-    mock_create_mcp_tools_sync,
-    mock_build_sql_graph,
-    mock_get_sql_tools,
-    mock_get_data_analysis_tool,
-    mock_get_memory_tools,
-    mock_catalog,
-    mock_llm,
-):
-    # Setup mocks
-    mock_create_mcp_tools_sync.return_value = []
-    mock_sql_graph = MagicMock(spec=CompiledStateGraph)
-    mock_build_sql_graph.return_value = mock_sql_graph
-    mock_get_sql_tools.return_value = _make_tool("text2sql")
-    mock_get_data_analysis_tool.return_value = _make_tool("data_analysis")
-
-    # Call
-    with patch("openchatbi.agent_graph.get_llm", return_value=mock_llm):
-        graph = build_agent_graph_sync(catalog=mock_catalog, enable_context_management=False)
-
-    # Assert
-    assert isinstance(graph, CompiledStateGraph)
-    mock_get_data_analysis_tool.assert_called_once()
+def test_build_agent_graph_sync_includes_data_analysis(runtime):
+    compiled = build_workflow_graph(runtime)
+    with (
+        patch("openchatbi.workflow.factory.build_configured_workflow", return_value=compiled),
+        patch("openchatbi.agent_graph.config.get", return_value=runtime.cfg),
+        patch("openchatbi.agent_graph._get_mcp_servers", return_value=[]),
+        patch("openchatbi.agent_graph.create_mcp_tools_sync", return_value=[]),
+    ):
+        graph = build_agent_graph_sync(runtime.catalog)
+        result = graph.invoke({"messages": [HumanMessage("有哪些指标")]})
+    assert {"semantic", "text2sql", "delivery"} <= graph.get_graph().nodes.keys()
+    assert runtime.registry.get("analyze", "delivery").enabled
+    assert result["results"]["metrics"]["status"] == "ok"
 
 
 @pytest.mark.asyncio
-@patch("openchatbi.agent_graph.get_memory_tools", return_value=[])
-@patch("openchatbi.analysis.agent.get_data_analysis_tool")
-@patch("openchatbi.agent_graph.get_sql_tools")
-@patch("openchatbi.agent_graph.build_sql_graph")
-@patch("openchatbi.agent_graph.get_mcp_tools_async")
-async def test_build_agent_graph_async_includes_data_analysis(
-    mock_get_mcp_tools_async,
-    mock_build_sql_graph,
-    mock_get_sql_tools,
-    mock_get_data_analysis_tool,
-    mock_get_memory_tools,
-    mock_catalog,
-    mock_llm,
-):
-    # Setup mocks
-    mock_get_mcp_tools_async.return_value = []
-    mock_sql_graph = MagicMock(spec=CompiledStateGraph)
-    mock_build_sql_graph.return_value = mock_sql_graph
-    mock_get_sql_tools.return_value = _make_tool("text2sql")
-    mock_get_data_analysis_tool.return_value = _make_tool("data_analysis")
-
-    # Call
-    with patch("openchatbi.agent_graph.get_llm", return_value=mock_llm):
-        graph = await build_agent_graph_async(catalog=mock_catalog, enable_context_management=False)
-
-    # Assert
-    assert isinstance(graph, CompiledStateGraph)
-    mock_get_data_analysis_tool.assert_called_once()
+async def test_build_agent_graph_async_includes_data_analysis(runtime):
+    compiled = build_workflow_graph(runtime)
+    with (
+        patch("openchatbi.workflow.factory.build_configured_workflow", return_value=compiled),
+        patch("openchatbi.agent_graph.config.get", return_value=runtime.cfg),
+        patch("openchatbi.agent_graph._get_mcp_servers", return_value=[]),
+        patch("openchatbi.agent_graph.get_mcp_tools_async", return_value=[]),
+    ):
+        graph = await build_agent_graph_async(runtime.catalog)
+        result = await graph.ainvoke({"messages": [HumanMessage("有哪些指标")]})
+    assert result["results"]["metrics"]["status"] == "ok"
+    assert "llm_node" not in graph.get_graph().nodes

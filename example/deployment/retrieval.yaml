@@ -1,0 +1,5 @@
+# Rebuildable index storage for this business package.
+# Embedding model, endpoint and key come from QWEN_EMBEDDING_* in .env.
+workflow:
+  retrieval_path: ../../data/semantic_retrieval/chatbi_mvp/chroma
+  retrieval_metadata_path: ../workflow/retrieval_metadata.json

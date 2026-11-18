@@ -114,6 +114,8 @@ def build_data_analysis_agent(
     llm_provider: str | None = None,
     checkpointer: BaseCheckpointSaver | None = None,
     memory_store: BaseStore | None = None,
+    text2sql_tool: StructuredTool | None = None,
+    schema_tools: list[StructuredTool] | None = None,
 ) -> CompiledStateGraph:
     """Build the data analysis agent.
 
@@ -131,9 +133,14 @@ def build_data_analysis_agent(
     from openchatbi.agent_graph import get_sql_tools
 
     # 1. Prepare tools
-    text2sql_tool = get_sql_tools(sql_graph=sql_graph, sync_mode=sync_mode)
+    if text2sql_tool is None:
+        text2sql_tool = get_sql_tools(sql_graph=sql_graph, sync_mode=sync_mode)
 
-    tools = [search_schema, show_schema, text2sql_tool, run_python_code]
+    tools = [
+        *(schema_tools if schema_tools is not None else [search_schema, show_schema]),
+        text2sql_tool,
+        run_python_code,
+    ]
 
     # Add forecast and anomaly detection if service is healthy
     if check_forecast_service_health():

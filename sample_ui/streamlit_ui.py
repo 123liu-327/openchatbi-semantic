@@ -120,6 +120,10 @@ async def process_user_message_stream(
             elif isinstance(event, StreamStep):
                 desc = event.text
 
+                if event.kind == "workflow":
+                    with thinking_container.expander(f"{event.label}：{desc}", expanded=False):
+                        st.json(event.data)
+
                 # Building the Plotly figure is UI-specific, so it stays here.
                 # The shared parser hands us the DSL plus the latest CSV data.
                 if event.kind == "visualization":
@@ -338,10 +342,6 @@ def process_download_links(content: str) -> str:
         return f"[DOWNLOAD_LINK:{filename}]"
 
     processed_content = re.sub(download_pattern, replace_link, content)
-
-    # Debug log to see if processing worked
-    if processed_content != content:
-        st.write(f"🔍 Debug: Processed download links - found {content.count('/api/download/report/')} links")
 
     return processed_content
 

@@ -104,25 +104,21 @@ def test_conflicting_canonical_metric_is_not_injected():
         layer.render(question="含税收入", selected_tables=["sales_orders"])
 
 
-def test_graph_assembly_injects_one_provider_into_both_consumers(mock_config):
+def test_sql_graph_assembly_has_no_semantic_discovery_nodes(mock_config):
     import openchatbi.text2sql.sql_graph as graph_module
 
     catalog = FileSystemCatalogStore(str(DATA / "catalog"), {"uri": "sqlite:///:memory:"})
-    layer = demo_layer()
     llm = Mock()
-    llm.bind_tools.return_value = llm
     with (
         patch.object(graph_module, "config") as config_handle,
-        patch.object(graph_module, "get_llm", return_value=llm),
         patch.object(graph_module, "get_text2sql_llm", return_value=llm),
         patch.object(graph_module, "create_sql_nodes", wraps=graph_module.create_sql_nodes) as nodes,
-        patch.object(graph_module, "schema_linking", wraps=graph_module.schema_linking) as linking,
     ):
         config_handle.get.return_value = mock_config
-        graph = graph_module.build_sql_graph(catalog, None, None, semantic=layer)
-    assert graph is not None
-    assert nodes.call_args.kwargs["semantic"] is layer
-    assert linking.call_args.kwargs["semantic"] is layer
+        graph = graph_module.build_sql_graph(catalog)
+    assert {"select_anchor", "plan_joins", "review_sql", "authorize_user"} <= graph.get_graph().nodes.keys()
+    assert not {"information_extraction", "table_selection"} & graph.get_graph().nodes.keys()
+    assert "semantic" not in nodes.call_args.kwargs
 
 
 def test_real_selection_generate_execute_path_with_deterministic_llm():

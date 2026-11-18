@@ -220,3 +220,44 @@ T8 验证：首次/重试和空 provider 共4例；golden+生成节点专项119 
 LLM 包装器对 401/403 返回不含原始异常/密钥的明确错误消息，不重复重试相同鉴权失败；其他失败和工具校验重试逻辑保留。未修改 streaming.py。新增10例测试，包含直接执行真实页面异步函数的无 token 正常回答/错误场景；全量903 passed / 1 skipped（19.53s），Black190文件通过，修改文件Ruff通过。
 
 用户更新.env后已重新启动工作台，健康检查200，生成配置中的接口地址和模型名与.env一致；未输出密钥，未自动发送付费模型测试请求。用户可刷新页面重新提交原问题验证真实服务。
+
+## 2026-11-17：四域编排与独立语义函数
+
+按用户确认的方案增加 workflow 模块：外层按子问题生成能力级计划，三个预编译能力子图负责 semantic、text2sql、delivery；通过 Send 和依赖状态调度，默认并发3、重规划2、累计任务20，函数调用默认预算40。三个子图都支持本域 auto 工具选择，外层只看到能力接口和扩展摘要。未为每个函数单独生成计划，也未动态生成任意 Python 或图代码。
+
+独立注册表、字段、指标、规则、JOIN、安全检查与数据交付函数，使用统一模型校验输入输出。字段沿用向量+规则70/30并硬排除禁用字段；指标沿用纯向量1-distance/2，递归依赖单独标注。千问密钥独立配置；Chroma三集合只存元数据，显式构建索引，增量复用向量、完整后原子发布。小索引设置逐批落盘，避免同步阈值较高时的临时HNSW读取错误。
+
+原Text2SQL图由适配器调用，执行入口仅在新模式上下文内增加AST检查，直接执行函数也检查实际SQL；旧模式行为保持。分析Agent支持注入统一查询工具，补充查询共享请求内缓存。数据集引用、中文CSV导出、工作台真实下载函数和分支隔离的图表数据均已验证。新模式使用独立工作台检查点；图缓存包含提供者、配置、语义快照与索引版本。
+
+原canonical数据、catalog、种子及SQL模板不改写；另新增5表40字段的MVP业务检索说明，AST静态提取并过滤4张干扰表，运行时不依赖源MVP目录。鉴权和图片适配器仅保留可信程序注入接口，PDF默认禁用，WebRAG/RL可经域工具注册扩展；本轮未实现相关服务、巡检或通用多步指标引擎。
+
+最终验证：agent_study全量953 passed / 2 skipped（31.92s）；原数据严格校验0 errors / 0 warnings；Black全库207文件通过；semantic mypy15文件通过；修改文件Ruff通过，全库仍为2项既有基线问题；uv锁校验通过。真实模型与embedding请求未发出，在线联调保留显式启用测试。完整启动、配置、接口与边界见 docs/four-domain-workflow.md。
+
+## 2026-11-18：数量查询与规划模型兼容修复
+
+现场问题“表有几张啊”未命中元数据快捷路由，错误地交给模型规划。实际模型服务拒绝默认 JSON Schema response_format（HTTP 400），强制 tool_choice 也被思考模式拒绝。规划改为 function_calling + tool_choice=auto，仍使用 QueryPlan 和实际工具参数校验；当前配置真实调用已返回合法计划。未调用真实 embedding，也未执行业务 SQL。
+
+补充表、字段、指标数量问法，限定为无业务筛选的元数据请求，行数与复合请求仍交给规划器。表列表返回真实 catalog 总数；当前配置复测返回5张表。规划错误按 HTTP 400/401/403/429、连接超时和计划校验分类展示；日志只记录请求 ID、异常类型及状态码，不输出原始服务异常或凭证。
+
+新增20例回归，含真实 ChatOpenAI 客户端的模拟 HTTP 传输测试。agent_study 完整回归973 passed / 2 skipped（28.68s），修改代码 Black、Ruff 和 git diff --check 通过。工作台需停止后重新启动，以重建缓存图。
+
+
+## 2026-11-18 字段选择衔接
+
+字段选择保留在语义域。resolve_query 默认 field_selection=hybrid，沿用 MVP 的字段向量与规则评分；field_selection=llm 复用原选表选字段提示词和示例，读取候选表字段后精选。必需字段和指标计算字段会保留，禁用字段硬排除。SQL 子图接收选择结果，不含字段选择节点。未进行真实云模型效果验收，手动验证步骤见 four-domain-workflow.md。
+
+本次 Conda agent_study 全量回归 994 passed / 2 skipped（25.25 秒）。新增及修改的 workflow 代码 Ruff 通过，git diff --check 通过。
+
+
+## 2026-11-18 配置组合与 FreshRetailNet 本地接入
+
+新增 includes 配置组合和字符串环境变量注入，工作台与索引命令统一遵守 CONFIG_FILE。数据库连接、业务 catalog/metrics/rules/joins、Chroma 路径分别配置。组合配置相对路径按声明文件解析，保留原单文件约定。数据库连接参与图缓存标识。
+
+FreshRetailNet 已导入独立 data/freshretail/freshretail.sqlite。daily_sales 485万行保留全部原始字段及 source_split，小时数组以 JSON 保存。stores 898行，products 865行，日粒度及维表键唯一性校验通过。日期范围2024-03-28至2024-07-02。归一化销量总和4,911,229.31，JOIN后总和与行数一致，SQLite quick_check通过。完整验证记录在本地 data/freshretail/verification_report.json。
+
+业务配置 example/freshretail 定义4指标、2规则、2关系，Chroma 独立索引3表、27字段、4指标。真实千问 embedding 构建和检索通过，必需字段保留、日查询数组字段排除通过。未进行真实聊天模型端到端效果验收。本地.env已设置FreshRetail入口与独立数据库连接，工作台重启后生效。上传按用户要求暂缓。
+
+
+## 2026-11-18 外层计划校验诊断与有限修正
+
+用户的季度利润归因问题触发外层ValueError，历史运行记录未保存具体校验项，无法据此还原该次精确失败原因。新增plan_validation阶段记录，记录格式校验项或缺少QueryPlan工具调用等诊断；模型计划在执行前校验，按max_replans上限反馈修正。HTTP鉴权、额度等错误仍明确返回。业务范围通过现有bi_config提示词配置注入，说明FreshRetail缺少价格、成本、利润，季度观测不完整。相同真实问题复测生成semantic.clarify合法计划，说明缺口并提供可执行替代方向。澄清检查点暂停与恢复回归通过。

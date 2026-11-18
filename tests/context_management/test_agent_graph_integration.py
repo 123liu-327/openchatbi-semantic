@@ -85,101 +85,24 @@ class TestAgentGraphIntegration:
             assert "messages" in result
             assert isinstance(result["messages"][0], AIMessage)
 
-    def test_build_graph_core_with_context_management(self, mock_catalog, mock_llm):
-        """Test core graph building with context management enabled."""
-
-        def create_mock_tool(name):
-            def mock_func(input_str: str) -> str:
-                return f"Mock {name} result"
-
-            return StructuredTool.from_function(func=mock_func, name=name, description=f"Mock {name} tool")
-
-        # Mock all the tool imports directly
+    @pytest.mark.parametrize("enabled", [True, False])
+    def test_build_graph_core_uses_single_workflow(self, mock_catalog, enabled):
+        expected = Mock()
         with (
-            patch("openchatbi.agent_graph.search_knowledge", create_mock_tool("search_knowledge")),
-            patch("openchatbi.agent_graph.search_schema", create_mock_tool("search_schema")),
-            patch("openchatbi.agent_graph.show_schema", create_mock_tool("show_schema")),
-            patch("openchatbi.agent_graph.run_python_code", create_mock_tool("run_python_code")),
-            patch("openchatbi.agent_graph.save_report", create_mock_tool("save_report")),
-            patch("openchatbi.agent_graph.get_sql_tools") as mock_get_sql_tools,
-            patch("openchatbi.agent_graph.build_sql_graph") as mock_sql_graph,
-            patch("openchatbi.agent_graph.get_memory_tools") as mock_memory_tools,
-            patch("openchatbi.agent_graph.create_mcp_tools_sync") as mock_mcp_tools,
-            patch("openchatbi.agent_graph.get_llm", return_value=mock_llm),
-            patch("openchatbi.analysis.agent.get_analysis_llm", return_value=mock_llm),
-            patch("openchatbi.analysis.agent.create_deep_agent", return_value=Mock()),
+            patch("openchatbi.workflow.factory.build_configured_workflow", return_value=expected) as factory,
+            patch("openchatbi.agent_graph.config.get", return_value=Mock()),
         ):
-
-            # Setup function-based mocks
-            mock_get_sql_tools.return_value = create_mock_tool("call_sql_graph_tool")
-            mock_sql_graph.return_value = Mock()
-            mock_memory_tools.return_value = (
-                create_mock_tool("manage_memory_tool"),
-                create_mock_tool("search_memory_tool"),
-            )
-            mock_mcp_tools.return_value = []
-
-            graph = _build_graph_core(
+            result = _build_graph_core(
                 catalog=mock_catalog,
                 sync_mode=True,
                 checkpointer=None,
                 memory_store=None,
                 memory_tools=None,
                 mcp_tools=[],
-                enable_context_management=True,
+                enable_context_management=enabled,
             )
-
-            # Should create a compiled graph
-            assert graph is not None
-            # Verify that SQL graph was initialized
-            mock_sql_graph.assert_called_once()
-
-    def test_build_graph_core_without_context_management(self, mock_catalog, mock_llm):
-        """Test core graph building with context management disabled."""
-
-        def create_mock_tool(name):
-            def mock_func(input_str: str) -> str:
-                return f"Mock {name} result"
-
-            return StructuredTool.from_function(func=mock_func, name=name, description=f"Mock {name} tool")
-
-        # Mock all the tool imports directly - same pattern as with context management
-        with (
-            patch("openchatbi.agent_graph.search_knowledge", create_mock_tool("search_knowledge")),
-            patch("openchatbi.agent_graph.search_schema", create_mock_tool("search_schema")),
-            patch("openchatbi.agent_graph.show_schema", create_mock_tool("show_schema")),
-            patch("openchatbi.agent_graph.run_python_code", create_mock_tool("run_python_code")),
-            patch("openchatbi.agent_graph.save_report", create_mock_tool("save_report")),
-            patch("openchatbi.agent_graph.get_sql_tools") as mock_get_sql_tools,
-            patch("openchatbi.agent_graph.build_sql_graph") as mock_sql_graph,
-            patch("openchatbi.agent_graph.get_memory_tools") as mock_memory_tools,
-            patch("openchatbi.agent_graph.create_mcp_tools_sync") as mock_mcp_tools,
-            patch("openchatbi.agent_graph.get_llm", return_value=mock_llm),
-            patch("openchatbi.analysis.agent.get_analysis_llm", return_value=mock_llm),
-            patch("openchatbi.analysis.agent.create_deep_agent", return_value=Mock()),
-        ):
-
-            # Setup function-based mocks
-            mock_get_sql_tools.return_value = create_mock_tool("call_sql_graph_tool")
-            mock_sql_graph.return_value = Mock()
-            mock_memory_tools.return_value = (
-                create_mock_tool("manage_memory_tool"),
-                create_mock_tool("search_memory_tool"),
-            )
-            mock_mcp_tools.return_value = []
-
-            graph = _build_graph_core(
-                catalog=mock_catalog,
-                sync_mode=True,
-                checkpointer=None,
-                memory_store=None,
-                memory_tools=None,
-                mcp_tools=[],
-                enable_context_management=False,
-            )
-
-            # Should still create a compiled graph
-            assert graph is not None
+        assert result is expected
+        assert factory.call_args.args[1] is mock_catalog
 
     def test_build_agent_graph_sync_with_context_management(self, mock_catalog):
         """Test sync graph building with context management."""

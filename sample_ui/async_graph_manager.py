@@ -31,7 +31,8 @@ class AsyncGraphManager:
             await setup_async_memory_store()
 
             # Initialize checkpointer
-            self._context_manager = AsyncSqliteSaver.from_conn_string("checkpoints.db")
+            checkpoint_path = "checkpoints-four-domain.db"
+            self._context_manager = AsyncSqliteSaver.from_conn_string(checkpoint_path)
             self.checkpointer = await self._context_manager.__aenter__()
 
             # Cache store for graph builds
@@ -54,7 +55,9 @@ class AsyncGraphManager:
         if not self._initialized:
             await self.initialize()
 
-        key = llm_provider or "__default__"
+        from openchatbi.workflow.factory import workflow_cache_identity
+
+        key = f"{llm_provider or '__default__'}:{workflow_cache_identity(config.get())}"
         if key in self.graphs:
             return self.graphs[key]
 

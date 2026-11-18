@@ -1,5 +1,6 @@
 """State classes for OpenChatBI graph execution."""
 
+import operator
 from typing import Annotated, Any
 
 from langchain_core.messages import AIMessage, HumanMessage
@@ -38,6 +39,15 @@ class SQLGraphState(MessagesState):
     rewrite_question: str
     tables: list[dict[str, Any]]
     info_entities: dict[str, Any]
+    prepared_schema: str  # Candidate schema supplied by the semantic domain in four_domain mode
+    resolved_query: dict[str, Any]
+    request_id: str
+    task_id: str
+    anchor: str
+    join_plan: dict[str, Any]
+    stage_error: str
+    authorization: dict[str, Any]
+    sql_stages: Annotated[list[dict[str, Any]], operator.add]
     sql: str
     sql_retry_count: int
     extraction_tool_rounds: int  # Tool rounds information extraction has requested for the current question
@@ -66,6 +76,18 @@ class SQLInputState(MessagesState):
     visualize: bool
 
 
+class PreparedSQLInputState(SQLInputState):
+    """Trusted semantic-domain output; no discovery inside the SQL graph."""
+
+    rewrite_question: str
+    tables: list[dict[str, Any]]
+    info_entities: dict[str, Any]
+    prepared_schema: str
+    resolved_query: dict[str, Any]
+    request_id: str
+    task_id: str
+
+
 class OutputState(MessagesState):
     """Output state schema for the main graph."""
 
@@ -87,3 +109,7 @@ class SQLOutputState(MessagesState):
     confidence_diagnostics: list[str]
     human_sql_decision: str
     recovery_strategy: str  # Last error's recovery strategy (empty if none); see RecoveryStrategy
+    anchor: str
+    join_plan: dict[str, Any]
+    stage_error: str
+    sql_stages: list[dict[str, Any]]

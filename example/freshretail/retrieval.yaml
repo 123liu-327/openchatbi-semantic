@@ -1,0 +1,3 @@
+workflow:
+  retrieval_path: ../../data/semantic_retrieval/freshretail/chroma
+  retrieval_metadata_path: null

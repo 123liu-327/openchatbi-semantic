@@ -467,6 +467,9 @@ def create_sql_nodes(
             Tuple[dict, str]: A tuple containing (schema_info, CSV string).
         """
         limit_enabled, result_limit = _get_sql_result_limit_config()
+        from openchatbi.workflow.security import enforce_active_policy
+
+        enforce_active_policy(sql, dialect)
         is_safe, reason = _validate_sql_safety(sql, dialect)
         if not is_safe:
             raise SQLSecurityError(reason)
@@ -579,7 +582,9 @@ def create_sql_nodes(
         tables_columns = state["tables"]
         system_prompt = (
             get_text2sql_dialect_prompt_template(dialect)
-            .replace("[table_schema]", _get_table_schema_prompt(tables_columns, question))
+            .replace(
+                "[table_schema]", state.get("prepared_schema") or _get_table_schema_prompt(tables_columns, question)
+            )
             .replace("[examples]", _get_relevant_sql_examples_prompt(question, tables_columns))
             .replace("[time_field_placeholder]", datetime.datetime.now().strftime(datetime_format))
         )
@@ -735,7 +740,7 @@ def create_sql_nodes(
 
         system_prompt = (
             get_text2sql_dialect_prompt_template(dialect)
-            .replace("[table_schema]", _get_table_schema_prompt(tables, question))
+            .replace("[table_schema]", state.get("prepared_schema") or _get_table_schema_prompt(tables, question))
             .replace("[examples]", _get_relevant_sql_examples_prompt(question, tables))
             .replace("[time_field_placeholder]", datetime.datetime.now().strftime(datetime_format))
         )
@@ -856,7 +861,9 @@ def create_sql_nodes(
             # Source-table schema, not the result-set schema: the structural
             # rubric checks (columns/where/joins/subquery) need the tables the
             # SQL was written against.
-            table_schema = _get_table_schema_prompt(state.get("tables", []) or [], question)
+            table_schema = state.get("prepared_schema") or _get_table_schema_prompt(
+                state.get("tables", []) or [], question
+            )
             evaluator = SimpleSQLEvaluator(llm)
             result = evaluator.evaluate(question, sql_query, schema_info, data_sample, table_schema=table_schema)
         except Exception as e:  # never block the answer on evaluator failure

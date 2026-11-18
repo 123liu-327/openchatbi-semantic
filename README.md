@@ -13,6 +13,84 @@
 > 多表 JOIN 的键与顺序完全交给模型。本仓库把口径做成一份可执行的语义层（指标定义 + 依赖闭包 + 表关系图 +
 > 字段级口径规则），让**问答链路与巡检链路共用同一份定义**，而不是各写一套。
 
+
+## 当前二开版本启动与配置
+
+当前入口采用四域 LangGraph 编排。外层拆分能力级子任务，语义层负责指标、规则和表字段选择，SQL 层负责主表、JOIN、SQL 生成、安全检查、权限校验和执行，交付层负责分析与 CSV。字段选择支持 MVP 向量与规则混合评分及原 LLM 提示词选择。
+
+本地工作台使用同进程 Streamlit 和 Python，默认地址为 http://localhost:8501。
+
+```powershell
+conda activate agent_study
+python -m pip install -e .
+Copy-Item .env.example .env  # 仅首次创建时执行
+# 在 .env 填写聊天模型及独立的 QWEN_EMBEDDING_* 配置
+python -m scripts.build_semantic_index
+python run_workbench.py
+```
+
+未设置 CONFIG_FILE 时，启动器准备隔离的 chatbi_mvp 演示数据库与配置。真实千问 embedding 在索引构建和相似检索时调用。列表与按 ID 查询支持离线执行。
+
+### 独立配置数据库、业务知识和索引
+
+| 配置 | 示例位置 | 作用 |
+|---|---|---|
+| 入口 | example/deployment/config.yaml | 组合其他文件，设置模型、工作流、权限和报告目录 |
+| 业务数据库 | example/deployment/database.yaml | SQL 方言与 data_warehouse_config，连接串从本机环境读取 |
+| 业务知识包 | example/deployment/business.yaml | catalog、指标 metrics.yaml、规则 rules.yaml、关系 joins.yaml |
+| 检索服务 | example/deployment/retrieval.yaml | Chroma 存储目录及附加检索说明 |
+| 密钥 | 根目录 .env | 聊天密钥、QWEN_EMBEDDING_*、数据库连接串 |
+
+指标和规则的权威定义保存在 YAML/JSON 与 catalog 中。Chroma 保存表、字段、指标的检索索引，可由定义文件重新构建。业务 SQL 通过业务数据库连接执行。切换数据库、知识包或索引目录可分别配置。
+
+启用可组合的演示配置时，在根目录 .env 增加以下内容。SQLite 连接串中的绝对路径需按本机位置填写。
+
+```dotenv
+CONFIG_FILE=example/deployment/config.yaml
+CHATBI_DATABASE_URI=sqlite:///D:/path/to/openchatbi/data/semantic_demo/demo.sqlite
+```
+
+示例业务包使用演示 catalog。首次可先运行以下命令准备它，再启用上面的 CONFIG_FILE。
+
+```powershell
+python -m scripts.run_semantic_demo
+python -m scripts.build_semantic_index
+python run_workbench.py
+```
+
+入口中的 includes 按顺序合并 YAML，入口自身最后覆盖。字典递归合并，列表整体替换。组合配置的文件路径相对声明它的 YAML 文件解析，SQL URI 保留原值。配置支持 ${ENV_NAME}，缺失变量会明确报错。原单文件配置的相对路径约定继续兼容。
+
+接入另一个业务时，复制配置目录，调整数据库连接、catalog、指标、规则、JOIN 和授权表。为业务包指定独立的 retrieval_path，然后重建索引并重启工作台。源文件或 embedding 模型发生变化后，过期索引会被拒绝使用。FreshRetailNet 下载文件位于本地 data/freshretailnet_50k。其本地导入命令和独立业务包见下节。
+
+### FreshRetailNet 本地数据接入
+
+下载官方 train.parquet 和 eval.parquet 到 data/freshretailnet_50k/data 后执行。Parquet 导入需要 pyarrow，Conda agent_study 已验证可用。
+
+```powershell
+python -m pip install pyarrow  # 其他环境缺少依赖时安装
+python -m scripts.import_freshretail
+```
+
+导入生成 data/freshretail/freshretail.sqlite 和 catalog，业务定义位于 example/freshretail。数据包含 450 万行 train 和 35 万行 eval。daily_sales 保留全部原始字段及 source_split，小时数组序列化为 JSON；stores 与 products 从原始编号和分类去重提取并校验唯一性。
+
+在本地 .env 设置以下两项，按本机位置修改数据库绝对路径。随后构建业务专用索引并重启工作台。
+
+```dotenv
+CONFIG_FILE=example/freshretail/config.yaml
+CHATBI_DATABASE_URI=sqlite:///D:/path/to/openchatbi/data/freshretail/freshretail.sqlite
+```
+
+```powershell
+python -m scripts.build_semantic_index
+python run_workbench.py
+```
+
+可询问“2024年4月每日归一化销量趋势”“按城市统计2024年4月归一化销量”“按商品一级分类统计2024年5月缺货小时数”。sale_amount 是官方归一化销量，当前数据无法计算销售金额、收入和利润；编号保持匿名。默认合并 train/eval 并按问题日期过滤。当前指标包括归一化销量、缺货小时数、平均折扣系数和范围内门店数。
+
+本地 .env、下载数据、数据库、Chroma 索引和生成报告由 Git 忽略。可提交配置样例和业务定义。登录、SSO、PDF、图片解析、WebRAG、RL 及巡检属于后续扩展。本地可信身份与表列授权已接入 SQL 执行入口。
+
+详细执行策略、手动验收和扩展说明见 [四域工作流说明](docs/four-domain-workflow.md)。下文保留上游功能及安装说明，当前二开版本以本节启动方式为准。
+
 ---
 
 # OpenChatBI

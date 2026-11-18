@@ -1,0 +1,5 @@
+# Credentials and SQL URI are supplied locally through .env.
+dialect: sqlite
+data_warehouse_config:
+  uri: ${CHATBI_DATABASE_URI}
+  database_name: ''

@@ -1,0 +1,62 @@
+{
+  "tables": {
+    "dim_customers": "客户维度表：存储客户基本信息，包括客户名称、客户类型（OEM整车厂、储能集成商、电网集团等）、所属行业（交通、能源、工业）、所在国家和销售大区（欧洲、北美、亚太等）。用于按客户维度分析收入、利润和订单分布。 维度表 customer_id, customer_name, customer_type, industry, country, region",
+    "dim_products": "产品维度表：存储产品主数据，包括产品名称、产品线（动力电池-乘用车、储能系统-电网级等）、技术路线（三元锂、磷酸铁锂等）、以及产品成本信息（标准成本、材料成本、人工成本）。用于按产品维度分析收入、毛利、成本结构。 维度表 product_id, product_name, product_line, category, tech_route, standard_cost, material_cost, labor_cost",
+    "sales_orders": "销售订单表：记录每笔销售订单的详细信息，包括订单日期、订单状态、数量、单价、折扣、含税总额（gross_amount）、不含税收入（net_amount）、币种。通过 customer_id 和 product_id 关联客户表和产品表。是收入分析、订单统计的核心事实表。 事实表 order_id, order_no, customer_id, product_id, region, order_date, order_status, quantity, unit_price, discount_amount, gross_amount, net_amount, currency",
+    "exchange_rates": "汇率表：按日期和币种记录兑人民币汇率（rate_to_cny）。当订单涉及多币种时，需关联此表将金额统一折算为人民币。用于多币种收入汇总和跨区域财务对比。 参考表 rate_date, currency, rate_to_cny",
+    "finance_expenses": "费用表：记录企业各部门的期间费用明细，包括研发费用、销售费用、管理费用、财务费用，以及销售费用的子项（市场费用、物流费用、质保费用）。用于费用分析、利润计算（利润 = 毛利 - 期间费用）。 事实表 expense_id, expense_date, department, rd_expense, selling_expense, admin_expense, finance_expense, marketing_expense, logistics_expense, warranty_expense"
+  },
+  "fields": {
+    "dim_customers.customer_id": "客户唯一标识（主键），INT 类型。用于关联 sales_orders 表的外键 customer_id。",
+    "dim_customers.customer_name": "客户名称，VARCHAR(100)。示例：宝马集团、国家电网、特斯拉。用于查询特定客户的订单或收入。",
+    "dim_customers.customer_type": "客户类型分类，VARCHAR(50)。枚举值：OEM整车厂 / 储能集成商 / 电网集团 / 工商业用户 / 换电运营商 / 经销商。用于按客户类型维度做收入、订单分布分析。",
+    "dim_customers.industry": "客户所属行业，VARCHAR(50)。枚举值：交通 / 能源 / 工业 / 特种交通。用于按行业维度统计客户分布和收入占比。",
+    "dim_customers.country": "客户所在的具体国家，VARCHAR(50)。示例：Germany、United States、Japan、China。注意与 region（大区）的区别：country 是具体国家，region 是地区分组。当问题提到具体国家名称时使用此字段。",
+    "dim_customers.region": "客户所属的销售大区，VARCHAR(50)。枚举值：欧洲 / 北美 / 亚太 / 中东非洲 / 拉美。注意与 country（国家）的区别：region 是大区汇总维度。当问题说'某个市场/大区'时使用此字段，说具体国家名时用 country。",
+    "dim_products.product_id": "产品唯一标识（主键），INT 类型。用于关联 sales_orders 表的外键 product_id。",
+    "dim_products.product_name": "产品名称，VARCHAR(100)。示例：极氪001专用电池包、电网级液冷储能柜。用于查询特定产品的销量或收入。",
+    "dim_products.product_line": "产品线分类，VARCHAR(50)。枚举值：动力电池-乘用车 / 动力电池-商用车 / 储能系统-电网级 / 储能系统-工商业 / 电池材料与回收。用于按产品线维度分析收入、毛利。当用户提到'各产品线'或'按业务板块'时使用此字段。",
+    "dim_products.category": "产品分类（细分品类），VARCHAR(50)。枚举值：高能量密度型 / 超快充型 / 混动专用型 / 低温适配型 / 商用车标准型 / 电网级储能型 / 工商业储能型。比 product_line 更细的产品分类维度。",
+    "dim_products.tech_route": "技术路线，VARCHAR(50)。枚举值：三元锂 / 磷酸铁锂 / 钠离子 / 固态电池。用于按技术路线分析产品结构和成本差异。",
+    "dim_products.standard_cost": "产品标准成本，DECIMAL(10,2)。= material_cost + labor_cost + 制造费用分摊。用于核算产品总成本。注意：毛利计算建议用 material_cost + labor_cost。",
+    "dim_products.material_cost": "材料成本，DECIMAL(10,2)。产品的原材料采购成本（正极材料、电解液、隔膜等）。毛利计算公式中的核心组成部分：毛利 = net_amount - (material_cost + labor_cost) * quantity。",
+    "dim_products.labor_cost": "人工成本，DECIMAL(10,2)。产品的人工制造成本。毛利计算公式中的核心组成部分：毛利 = net_amount - (material_cost + labor_cost) * quantity。",
+    "sales_orders.order_id": "订单唯一标识（主键），BIGINT 类型。",
+    "sales_orders.order_no": "订单编号，VARCHAR(50)。业务编号，格式如 ORD-2026-001234。用于查询特定订单明细。",
+    "sales_orders.customer_id": "客户外键，INT。关联 dim_customers.customer_id。当需要按客户维度分析时，通过此字段 JOIN dim_customers。",
+    "sales_orders.product_id": "产品外键，INT。关联 dim_products.product_id。当需要按产品维度分析时，通过此字段 JOIN dim_products。",
+    "sales_orders.region": "订单销售区域（冗余字段），VARCHAR(50)。枚举值：欧洲 / 北美 / 亚太 / 中东非洲 / 拉美。与 dim_customers.region 相同，冗余存储在订单表中便于直接筛选。当只需按大区过滤收入且不需要其他客户信息时，可直接使用此字段避免 JOIN。",
+    "sales_orders.order_date": "订单日期，DATE 类型。格式 YYYY-MM-DD。所有时间范围筛选（本月、上月、最近N个月、季度、年度）都基于此字段。也用于关联 exchange_rates.rate_date 进行汇率换算。",
+    "sales_orders.order_status": "订单状态，VARCHAR(20)。枚举值：completed（已完成）/ cancelled（已取消）/ pending（待处理）。统计收入、订单量等指标时，必须过滤 order_status = 'completed'。",
+    "sales_orders.quantity": "订单数量，DECIMAL(10,2)。单位为 MWh 或套数。用于统计销量、计算成本（cost * quantity）。",
+    "sales_orders.unit_price": "单价（不含税），DECIMAL(10,2)。每 MWh 或每套的价格。用于分析定价策略、计算客单价。",
+    "sales_orders.discount_amount": "折扣金额，DECIMAL(10,2)。该订单的折扣优惠金额。用于分析折扣力度、计算实际售价。",
+    "sales_orders.gross_amount": "含税总额，DECIMAL(12,2)。包含增值税的订单总金额。注意：除非用户明确要求'含税金额'，否则不应使用此字段。日常说的'收入''销售额'统一使用 net_amount（不含税收入）。",
+    "sales_orders.net_amount": "不含税收入（财务口径的销售额），DECIMAL(12,2)。这是业务中'收入''销售额''营业收入'的标准字段。毛利计算：毛利 = net_amount - (material_cost + labor_cost) * quantity。统计收入时必须同时过滤 order_status = 'completed'。",
+    "sales_orders.currency": "订单币种，VARCHAR(10)。示例：CNY、USD、EUR、JPY。当涉及多币种收入汇总时，需通过 currency + order_date 关联 exchange_rates 表。",
+    "exchange_rates.rate_date": "汇率日期，DATE 类型。通过 sales_orders.order_date = exchange_rates.rate_date 关联。",
+    "exchange_rates.currency": "币种代码，VARCHAR(10)。示例：USD、EUR、JPY。通过 sales_orders.currency = exchange_rates.currency 关联。",
+    "exchange_rates.rate_to_cny": "兑人民币汇率，DECIMAL(10,4)。换算公式：人民币金额 = 外币金额 * rate_to_cny。用于多币种收入统一折算为人民币。",
+    "finance_expenses.expense_id": "费用记录唯一标识（主键），BIGINT 类型。",
+    "finance_expenses.expense_date": "费用日期，DATE 类型。格式 YYYY-MM-DD。用于按时间段筛选费用记录。",
+    "finance_expenses.department": "部门名称，VARCHAR(50)。示例：研发部、销售部、管理部。用于按部门维度分析费用。",
+    "finance_expenses.rd_expense": "研发费用，DECIMAL(12,2)。企业研发投入（电池技术研发、储能系统研发等）。新能源企业研发投入占比高，是重要的费用分析维度。",
+    "finance_expenses.selling_expense": "销售费用（总项），DECIMAL(12,2)。包含子项：marketing_expense + logistics_expense + warranty_expense。注意：汇总时不要重复计算！selling_expense 已包含其子项。",
+    "finance_expenses.admin_expense": "管理费用，DECIMAL(12,2)。行政管理相关费用。",
+    "finance_expenses.finance_expense": "财务费用，DECIMAL(12,2)。利息支出、汇兑损益等财务相关费用。",
+    "finance_expenses.marketing_expense": "市场费用，DECIMAL(12,2)。属于 selling_expense 的子项。包括展会、广告、品牌推广等。注意：是销售费用的子项，不可与 selling_expense 加总。",
+    "finance_expenses.logistics_expense": "物流费用，DECIMAL(12,2)。属于 selling_expense 的子项。电池产品运输、仓储等费用。注意：是销售费用的子项，不可与 selling_expense 加总。",
+    "finance_expenses.warranty_expense": "质保费用，DECIMAL(12,2)。属于 selling_expense 的子项。电池质保期内的维修、更换费用。注意：是销售费用的子项，不可与 selling_expense 加总。"
+  },
+  "provenance": {
+    "tables": "chatbi_mvp/table_retriever.py:TABLE_METADATA",
+    "fields": "chatbi_mvp/field_matcher.py:FIELD_METADATA",
+    "method": "AST literal_eval; canonical catalog filter; additive index metadata only"
+  },
+  "excluded_tables": [
+    "hr_attendance_records",
+    "iot_device_alerts",
+    "legal_contract_archive",
+    "warehouse_temperature_logs"
+  ]
+}

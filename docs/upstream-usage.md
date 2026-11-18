@@ -3,8 +3,8 @@
 本页保留本仓库原 README 中的上游功能、安装和配置说明。当前二开版本的启动入口、能力状态及已知问题见[项目首页](../README.md)。
 
 
-OpenChatBI is an open source, chat-based intelligent BI tool powered by large language models, designed to help users 
-query, analyze, and visualize data through natural language conversations. Built on LangGraph and LangChain ecosystem, 
+OpenChatBI is an open source, chat-based intelligent BI tool powered by large language models, designed to help users
+query, analyze, and visualize data through natural language conversations. Built on LangGraph and LangChain ecosystem,
 it provides chat agents and workflows that support natural language to SQL conversion and streamlined data analysis.
 
 ## Core Features
@@ -321,7 +321,7 @@ OpenChatBI supports sophisticated customization through prompt engineering and c
 - **Prompt Engineering Configuration**: Customize system prompts, business glossaries, and data warehouse introductions
 - **Data Catalog Management**: Configure table metadata, column descriptions, and SQL generation rules
 - **Business Rules**: Define table selection criteria and domain-specific SQL constraints
-- **Forecasting Service**: Configure the forecasting service url and prompt based on your own deployment 
+- **Forecasting Service**: Configure the forecasting service url and prompt based on your own deployment
 
 For detailed configuration options and examples, see the [Advanced Features](#advanced-features) section.
 
@@ -418,14 +418,14 @@ OpenChatBI is built using a modular architecture with clear separation of concer
 ```mermaid
 graph TD
     START((Start)) --> llm_node[llm_node]
-    
+
     llm_node -->|tool_call: AskHuman| ask_human[ask_human]
     llm_node -->|tool_call: Other Tools| use_tool[use_tool]
     llm_node -->|final_answer| END((End))
-    
+
     ask_human --> llm_node
     use_tool --> llm_node
-    
+
     subgraph use_tool [Available Tools in use_tool node]
         text2sql
         data_analysis
@@ -442,33 +442,33 @@ graph TD
 ```mermaid
 graph TD
     START((Start)) --> IE[information_extraction]
-    
+
     IE -->|ask_human| AH[ask_human]
     IE -->|search_knowledge| SK[search_knowledge]
     IE -->|next| TS[table_selection]
     IE -->|end| END((End))
-    
+
     AH --> IE
     SK --> IE
-    
+
     TS --> GS[generate_sql]
-    
+
     GS -->|execute_sql| ES[execute_sql]
     GS -->|end| END
-    
+
     ES -->|success| SS[score_sql]
     ES -->|regenerate_sql| RS[regenerate_sql]
     ES -->|end| END
 
     SS --> CG[confidence_gate]
-    
+
     CG -->|generate_visualization| GV[generate_visualization]
     CG -->|regenerate_sql| RS
     CG -->|execute_sql| ES
-    
+
     RS -->|execute_sql| ES
     RS -->|end| END
-    
+
     GV --> END
 ```
 
@@ -657,8 +657,8 @@ sql_rule: |
 
 #### Introduction
 
-High-quality catalog data is essential for accurate Text2SQL generation and data analysis. OpenChatBI automatically 
-discovers and indexes data warehouse table structures while providing flexible management for business metadata, column 
+High-quality catalog data is essential for accurate Text2SQL generation and data analysis. OpenChatBI automatically
+discovers and indexes data warehouse table structures while providing flexible management for business metadata, column
 descriptions, and query optimization rules.
 
 #### Catalog Structure
@@ -689,7 +689,7 @@ The catalog system organizes metadata in a hierarchical structure:
   - Computed dynamically during query execution rather than stored as physical columns
   - Examples: CTR (clicks/impressions), conversion rates, profit margins
   - Enable complex business calculations without pre-computing values
-  
+
 #### Loading Catalog from Database
 
 OpenChatBI can automatically discover and load table structures from your data warehouse:
@@ -793,7 +793,7 @@ Expected response:
   "min_input_length": 96,
   "uptime_seconds": 123.45
 }
-``` 
+```
 
 ### Python Code Execution Configuration
 
@@ -850,7 +850,7 @@ The project uses modern Python tooling for code quality:
 # Format code
 uv run black .
 
-# Lint code  
+# Lint code
 uv run ruff check .
 
 # Type checking
